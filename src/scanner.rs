@@ -1,7 +1,38 @@
-use std::string::String;
+use std::{ collections::HashMap, string::String };
 
 fn is_digit(ch: char) -> bool {
-    ch as u8 >= '0' as u8 && ch as u8 <= '9' as u8
+    (ch as u8) >= ('0' as u8) && (ch as u8) <= ('9' as u8)
+}
+
+fn is_alpha(ch: char) -> bool {
+    let uch = ch as u8;
+    (uch >= ('a' as u8) && uch <= ('z' as u8)) ||
+        (uch >= ('A' as u8) && uch <= ('Z' as u8)) ||
+        ch == '_'
+}
+
+fn is_alpha_numeric(ch: char) -> bool {
+    is_alpha(ch) || is_digit(ch)
+}
+fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
+    HashMap::from([
+        ("and", And),
+        ("class", Class),
+        ("else", Else),
+        ("false", False),
+        ("for", For),
+        ("fun", Fun),
+        ("if", If),
+        ("nil", Nil),
+        ("or", Or),
+        ("print", Print),
+        ("return", Return),
+        ("super", Super),
+        ("this", This),
+        ("true", True),
+        ("var", Var),
+        ("while", While),
+    ])
 }
 
 pub struct Scanner {
@@ -10,6 +41,8 @@ pub struct Scanner {
     start: usize,
     current: usize,
     line: usize,
+
+    keywords: HashMap<&'static str, TokenType>,
 }
 
 impl Scanner {
@@ -20,6 +53,7 @@ impl Scanner {
             start: 0,
             current: 0,
             line: 1,
+            keywords: get_keywords_hashmap(),
         }
     }
 
@@ -107,13 +141,28 @@ impl Scanner {
             '"' => self.string()?,
             c => {
                 if is_digit(c) {
-                    self.number();
-                } else{
+                    self.number()?;
+                } else if is_alpha(c) {
+                    self.identifier();
+                } else {
                     return Err(format!("Unrecognized char at line: {}: {}", self.line, c));
                 }
-            } 
+            }
         }
         Ok(())
+    }
+
+    fn identifier(&mut self) {
+        while is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+
+        let substring = &self.source[self.start..self.current];
+        if let Some(&t_type) = self.keywords.get(substring) {
+            self.add_token(t_type);
+        } else {
+            self.add_token(Identifier);
+        }
     }
 
     fn number(self: &mut Self) -> Result<(), String> {
@@ -131,8 +180,10 @@ impl Scanner {
         let substring = &self.source[self.start..self.current];
         let value = substring.parse::<f64>();
         match value {
-            Ok(value)=> self.add_token_lit(Number, Some(FValue(value))),
-            Err(_) => return Err(format!("Could not parse number: {}", substring)),
+            Ok(value) => self.add_token_lit(Number, Some(FValue(value))),
+            Err(_) => {
+                return Err(format!("Could not parse number: {}", substring));
+            }
         }
         Ok(())
     }
@@ -142,7 +193,10 @@ impl Scanner {
             return '\0';
         }
 
-        self.source.chars().nth(self.current + 1).unwrap()
+        self.source
+            .chars()
+            .nth(self.current + 1)
+            .unwrap()
     }
 
     fn string(self: &mut Self) -> Result<(), String> {
@@ -196,9 +250,7 @@ impl Scanner {
 
     fn add_token_lit(self: &mut Self, token_type: TokenType, literal: Option<LiteralValue>) {
         let mut text = "".to_string();
-        self.source[self.start..self.current]
-            .chars()
-            .map(|ch| text.push(ch));
+        let _ = self.source[self.start..self.current].chars().map(|ch| text.push(ch));
 
         self.tokens.push(Token {
             token_type: token_type,
@@ -209,7 +261,7 @@ impl Scanner {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
     // Signle-char tokens
     LeftParen,
@@ -382,7 +434,7 @@ mod tests {
         let source = "123.123\n321.0\n5";
         let mut scanner = Scanner::new(source);
         scanner.scan_tokens().unwrap();
-        
+
         assert_eq!(scanner.tokens.len(), 4);
         for i in 0..3 {
             assert_eq!(scanner.tokens[i].token_type, Number);
@@ -400,4 +452,20 @@ mod tests {
             _ => panic!("Incorrect literal type"),
         }
     }
+
+    #[test]
+    fn get_identifier() {
+        let source = "this_is_a_var = 12;";
+        let mut scanner = Scanner::new(source);
+        scanner.scan_tokens().unwrap();
+
+        assert_eq!(scanner.tokens.len(), 5);
+
+        assert_eq!(scanner.tokens[0].token_type, Identifier);
+        assert_eq!(scanner.tokens[1].token_type, Eqaual);
+        assert_eq!(scanner.tokens[2].token_type, Number);
+        assert_eq!(scanner.tokens[3].token_type, Semicolon);
+        assert_eq!(scanner.tokens[4].token_type, Eof);
+    }
+
 }
