@@ -491,3 +491,4 @@ mod tests {
         assert_eq!(scanner.tokens[12].token_type, Eof);
     }
 }
+// Scanner implementation is completed .dena --> 05.12.2024
