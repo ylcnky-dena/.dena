@@ -2,6 +2,8 @@ use std::{ env, fs, process::exit };
 use std::io::{ self, BufRead, Write };
 
 mod scanner;
+mod expr;
+use crate::expr::*;
 use crate::scanner::*;
 
 fn run_file(path: &str) -> Result<(), String> {
