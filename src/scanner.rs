@@ -376,4 +376,28 @@ mod tests {
             _ => panic!("Incorrect literal type"),
         }
     }
+
+    #[test]
+    fn number_literals() {
+        let source = "123.123\n321.0\n5";
+        let mut scanner = Scanner::new(source);
+        scanner.scan_tokens().unwrap();
+        
+        assert_eq!(scanner.tokens.len(), 4);
+        for i in 0..3 {
+            assert_eq!(scanner.tokens[i].token_type, Number);
+        }
+        match scanner.tokens[0].literal {
+            Some(FValue(val)) => assert_eq!(val, 123.123),
+            _ => panic!("Incorrect literal type"),
+        }
+        match scanner.tokens[1].literal {
+            Some(FValue(val)) => assert_eq!(val, 321.0),
+            _ => panic!("Incorrect literal type"),
+        }
+        match scanner.tokens[2].literal {
+            Some(FValue(val)) => assert_eq!(val, 5.0),
+            _ => panic!("Incorrect literal type"),
+        }
+    }
 }
