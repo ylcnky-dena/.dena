@@ -1,5 +1,9 @@
 use std::string::String;
 
+fn is_digit(ch: char) -> bool {
+    ch as u8 >= '0' as u8 && ch as u8 <= '9' as u8
+}
+
 pub struct Scanner {
     source: String,
     tokens: Vec<Token>,
@@ -101,11 +105,44 @@ impl Scanner {
                 self.line += 1;
             }
             '"' => self.string()?,
-            _ => {
-                return Err(format!("Unrecognized char at line: {}: {}", self.line, c));
-            }
+            c => {
+                if is_digit(c) {
+                    self.number();
+                } else{
+                    return Err(format!("Unrecognized char at line: {}: {}", self.line, c));
+                }
+            } 
         }
         Ok(())
+    }
+
+    fn number(self: &mut Self) -> Result<(), String> {
+        while is_digit(self.peek()) {
+            self.advance();
+        }
+
+        if self.peek() == '.' && is_digit(self.peek_next()) {
+            self.advance();
+
+            while is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+        let substring = &self.source[self.start..self.current];
+        let value = substring.parse::<f64>();
+        match value {
+            Ok(value)=> self.add_token_lit(Number, Some(FValue(value))),
+            Err(_) => return Err(format!("Could not parse number: {}", substring)),
+        }
+        Ok(())
+    }
+
+    fn peek_next(self: &Self) -> char {
+        if self.current + 1 >= self.source.len() {
+            return '\0';
+        }
+
+        self.source.chars().nth(self.current + 1).unwrap()
     }
 
     fn string(self: &mut Self) -> Result<(), String> {
@@ -159,7 +196,7 @@ impl Scanner {
 
     fn add_token_lit(self: &mut Self, token_type: TokenType, literal: Option<LiteralValue>) {
         let mut text = "".to_string();
-        let lit = self.source[self.start..self.current]
+        self.source[self.start..self.current]
             .chars()
             .map(|ch| text.push(ch));
 
