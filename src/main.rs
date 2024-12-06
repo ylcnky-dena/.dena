@@ -3,7 +3,7 @@ use std::io::{ self, BufRead, Write };
 
 mod scanner;
 mod expr;
-use crate::expr::*;
+mod parser;
 use crate::scanner::*;
 
 fn run_file(path: &str) -> Result<(), String> {
