@@ -70,7 +70,7 @@ impl Parser {
     }
 
     fn factor(&mut self) -> Expr {
-        let mut epxr = self.unary();
+        let mut expr = self.unary();
         while self.match_tokens(&[Slash, Star]) {
             let op = self.previous();
             let rhs = self.unary();
@@ -104,7 +104,7 @@ impl Parser {
             let token = self.peek();
             self.advance();
             Literal { 
-                value: LiteralValue::from_token(token) 
+                value: LiteralValue::from_token(token),
             }
         }
     }
@@ -118,11 +118,11 @@ impl Parser {
         }
     }
 
-    fn match_token(&mut self, typ: &TokenType) -> bool {
+    fn match_token(&mut self, typ: TokenType) -> bool {
         if self.is_at_end() {
             return false;
         } else {
-            if self.peek().token_type == *typ {
+            if self.peek().token_type == typ {
                 self.advance();
                 true
             } else {
@@ -133,7 +133,7 @@ impl Parser {
 
     fn match_tokens(&mut self, typs: &[TokenType]) -> bool {
         for typ in typs {
-            if self.match_token(typ) {
+            if self.match_token(*typ) {
                 return true;
             }
         }
