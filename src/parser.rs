@@ -15,7 +15,7 @@ macro_rules! match_tokens {
         }
             result
         }
-    }
+    };
 }
 
 impl Parser {
@@ -40,8 +40,7 @@ impl Parser {
                 operator,
                 right: Box::from(rhs),
             };
-
-        }   
+        }
         expr
     }
 
@@ -50,8 +49,10 @@ impl Parser {
         while self.match_tokens(&[Greater, GreaterEqual, Less, LessEqual]) {
             let op = self.previous();
             let rhs = self.term();
-            expr = Binary { 
-                left: Box::from(expr), operator: op, right: Box::from(rhs) 
+            expr = Binary {
+                left: Box::from(expr),
+                operator: op,
+                right: Box::from(rhs),
             };
         }
         expr
@@ -62,8 +63,10 @@ impl Parser {
         while self.match_tokens(&[Minus, Plus]) {
             let op = self.previous();
             let rhs = self.factor();
-            expr = Binary { 
-                left: Box::from(expr), operator: op, right: Box::from(rhs) 
+            expr = Binary {
+                left: Box::from(expr),
+                operator: op,
+                right: Box::from(rhs),
             };
         }
         expr
@@ -74,8 +77,10 @@ impl Parser {
         while self.match_tokens(&[Slash, Star]) {
             let op = self.previous();
             let rhs = self.unary();
-            expr = Binary { 
-                left: Box::from(expr), operator: op, right: Box::from(rhs) 
+            expr = Binary {
+                left: Box::from(expr),
+                operator: op,
+                right: Box::from(rhs),
             };
         }
         expr
@@ -85,8 +90,9 @@ impl Parser {
         if self.match_tokens(&[Bang, Minus]) {
             let op = self.previous();
             let rhs = self.unary();
-            Unary { 
-                operator: op, right: Box::from(rhs) 
+            Unary {
+                operator: op,
+                right: Box::from(rhs),
             }
         } else {
             self.primary()
@@ -97,13 +103,13 @@ impl Parser {
         if self.match_token(LeftParen) {
             let expr = self.expression();
             self.consume(RightParen, "Expected ')'");
-            Grouping { 
+            Grouping {
                 expression: Box::from(expr),
             }
         } else {
             let token = self.peek();
             self.advance();
-            Literal { 
+            Literal {
                 value: LiteralValue::from_token(token),
             }
         }
