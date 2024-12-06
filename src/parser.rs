@@ -1,5 +1,5 @@
-use crate::scanner::{ Token, TokenType::*, TokenType };
-use crate::expr::{ self, Expr::{self, *} };
+use crate::expr::{ Expr, Expr::*, LiteralValue };
+use crate::scanner::{ Token, TokenType, TokenType::* };
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -15,8 +15,9 @@ macro_rules! match_tokens {
         }
             result
         }
-    };
+    }
 }
+
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
@@ -25,18 +26,21 @@ impl Parser {
         }
     }
 
-    fn expression(&mut self) -> Expr {
+    pub fn expression(&mut self) -> Expr {
         self.equality()
     }
 
-    fn equality(&mut self) {
+    fn equality(&mut self) -> Expr {
         let mut expr = self.comparison();
         while self.match_tokens(&[BangEqual, EqualEqual]) {
             let operator = self.previous();
             let rhs = self.comparison();
-            expr = Binary { 
-                left: Box::from(expr), operator: operator, right: Box::from(rhs) 
+            expr = Binary {
+                left: Box::from(expr),
+                operator,
+                right: Box::from(rhs),
             };
+
         }   
         expr
     }
