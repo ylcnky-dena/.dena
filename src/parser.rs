@@ -165,3 +165,51 @@ impl Parser {
         self.peek().token_type == Eof
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use std::collections::btree_map::Values;
+
+    use super::*;
+    use crate::scanner::LiteralValue::*;
+
+    #[test]
+    fn test_addition() {
+        let one = Token {
+            token_type: Number,
+            lexeme: "1".to_string(),
+            literal: Some(IntValue(1)),
+            line_number: 0,
+        };
+        let plus = Token {
+            token_type: Plus,
+            lexeme: "+".to_string(),
+            literal: None,
+            line_number: 0,
+        };
+        let two = Token {
+            token_type: Number,
+            lexeme: "2".to_string(),
+            literal: Some(IntValue(2)),
+            line_number: 0
+        };
+        let semicol = Token {
+            token_type: Semicolon,
+            lexeme: ";".to_string(),
+            literal: None,
+            line_number: 0
+        };
+
+        let tokens = vec![one, plus, two, semicol];
+        let mut parser = Parser::new(tokens);
+
+        let parsed_expr = parser.expression();
+        let string_expr = parsed_expr.to_string();
+
+        assert_eq!(string_expr, "(+ 1 2)");
+    }
+
+    #[test]
+    fn test_
+}
