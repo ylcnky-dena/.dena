@@ -169,10 +169,8 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::btree_map::Values;
-
     use super::*;
-    use crate::scanner::LiteralValue::*;
+    use crate::{scanner::LiteralValue::*, Scanner};
 
     #[test]
     fn test_addition() {
@@ -211,5 +209,15 @@ mod tests {
     }
 
     #[test]
-    fn test_
+    fn test_comparison() {
+        let source = "1 + 2 == 5 + 7";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        let mut parser = Parser::new(tokens);
+        let parsed_expr = parser.expression();
+        let string_expr = parsed_expr.to_string();
+
+        assert_eq!(string_expr, "(== (+ 1 2) (+ 5 7))")
+
+    }
 }
