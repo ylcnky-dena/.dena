@@ -1,4 +1,3 @@
-
 use crate::scanner::{ Token, TokenType };
 use crate::scanner;
 
@@ -12,7 +11,7 @@ pub enum LiteralValue {
 
 fn unwrap_as_f32(literal: Option<scanner::LiteralValue>) -> f32 {
     match literal {
-        Some(scanner::LiteralValue::IntValue(x)) =>x as f32,
+        Some(scanner::LiteralValue::IntValue(x)) => x as f32,
         Some(scanner::LiteralValue::FValue(x)) => x as f32,
         _ => panic!("Could not unwrap as f32"),
     }
@@ -44,7 +43,7 @@ impl LiteralValue {
             TokenType::False => Self::False,
             TokenType::True => Self::True,
             TokenType::Nil => Self::Nil,
-            _ => panic!("Could not create LiteralValue from {:?}", token)
+            _ => panic!("Could not create LiteralValue from {:?}", token),
         }
     }
 }

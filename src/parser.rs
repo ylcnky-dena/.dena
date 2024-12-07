@@ -26,7 +26,11 @@ impl Parser {
         }
     }
 
-    pub fn expression(&mut self) -> Result<Expr, String> {
+    pub fn parse(&mut self) -> Result<Expr, String> {
+        self.expression()
+    }
+
+    fn expression(&mut self) -> Result<Expr, String> {
         self.equality()
     }
 
@@ -100,22 +104,33 @@ impl Parser {
     }
 
     fn primary(&mut self) -> Result<Expr, String> {
-        if self.match_token(LeftParen) {
-            let expr = self.expression()?;
-            self.consume(RightParen, "Expected ')'");
-            Ok(Grouping {
-                expression: Box::from(expr),
-            })
-        } else {
-            let token = self.peek();
-            self.advance();
-            Ok(Literal {
-                value: LiteralValue::from_token(token),
-            })
+        let token = self.peek();
+        let result;
+
+        match token.token_type {
+            LeftParen => {
+                self.advance();
+                let expr = self.expression()?;
+                self.consume(RightParen, "Expected ')'")?;
+                result = Grouping {
+                    expression: Box::from(expr),
+                };
+            }
+            False | True | Nil | Number | StringLit => {
+                self.advance();
+                result = Literal {
+                    value: LiteralValue::from_token(token),
+                };
+            }
+            _ => {
+                return Err("Expected expression".to_string());
+            }
         }
+
+        Ok(result)
     }
 
-    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<(), String>  {
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<(), String> {
         let token = self.peek();
         if token.token_type == token_type {
             self.advance();
@@ -165,13 +180,31 @@ impl Parser {
     fn is_at_end(&mut self) -> bool {
         self.peek().token_type == Eof
     }
-}
 
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                Class | Fun | Var | For | If | While | Print | Return => {
+                    return;
+                }
+                _ => (),
+            }
+
+            self.advance();
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{scanner::LiteralValue::*, Scanner};
+    use crate::{ scanner::LiteralValue::*, Scanner };
 
     #[test]
     fn test_addition() {
@@ -191,19 +224,19 @@ mod tests {
             token_type: Number,
             lexeme: "2".to_string(),
             literal: Some(IntValue(2)),
-            line_number: 0
+            line_number: 0,
         };
         let semicol = Token {
             token_type: Semicolon,
             lexeme: ";".to_string(),
             literal: None,
-            line_number: 0
+            line_number: 0,
         };
 
         let tokens = vec![one, plus, two, semicol];
         let mut parser = Parser::new(tokens);
 
-        let parsed_expr = parser.expression().unwrap();
+        let parsed_expr = parser.parse().unwrap();
         let string_expr = parsed_expr.to_string();
 
         assert_eq!(string_expr, "(+ 1 2)");
@@ -215,10 +248,21 @@ mod tests {
         let mut scanner = Scanner::new(source);
         let tokens = scanner.scan_tokens().unwrap();
         let mut parser = Parser::new(tokens);
-        let parsed_expr = parser.expression().unwrap();
+        let parsed_expr = parser.parse().unwrap();
         let string_expr = parsed_expr.to_string();
 
         assert_eq!(string_expr, "(== (+ 1 2) (+ 5 7))")
+    }
 
+    #[test]
+    fn test_eq_with_paren() {
+        let source = "1 == (2 + 2)";
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens().unwrap();
+        let mut parser = Parser::new(tokens);
+        let parsed_expr = parser.parse().unwrap();
+        let string_expr = parsed_expr.to_string();
+
+        assert_eq!(string_expr, "(== 1 (group (+ 2 2)))")
     }
 }
