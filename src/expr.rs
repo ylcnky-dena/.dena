@@ -1,6 +1,7 @@
 use crate::scanner::{ Token, TokenType };
 use crate::scanner;
 
+#[derive(Debug, Clone)]
 pub enum LiteralValue {
     Number(f32),
     StringValue(String),
@@ -8,6 +9,8 @@ pub enum LiteralValue {
     False,
     Nil,
 }
+
+use LiteralValue::*;
 
 fn unwrap_as_f32(literal: Option<scanner::LiteralValue>) -> f32 {
     match literal {
@@ -46,6 +49,15 @@ impl LiteralValue {
             _ => panic!("Could not create LiteralValue from {:?}", token),
         }
     }
+    pub fn is_falsy(&self) -> LiteralValue {
+        match self {
+            Number(x) =>if *x == 0.0 as f32 {True} else {False},
+            StringValue(s) => if s.len() == 0 {True} else {False},
+            True => False,
+            False => True,
+            Nil => True,
+         }
+    }
 }
 
 pub enum Expr {
@@ -78,6 +90,23 @@ impl Expr {
                 let right_str = (*right).to_string();
                 format!("({} {})", operator_str, right_str)
             }
+        }
+    }
+
+    pub fn evaluate(&self) -> Result< LiteralValue, String> {
+        match self {
+            Expr::Literal { value } => Ok((*value).clone()),
+            Expr::Grouping { expression } => expression.evaluate(),
+            Expr::Unary { operator, right } => {
+                let right = right.evaluate()?;
+                match (&right, operator.token_type) {
+                    (Number(x), TokenType::Minus) => Ok(Number(-x)),
+                    (_, TokenType::Minus) => return Err(format!("Minus not implemented for {}", right.to_string())),
+                    (any, TokenType::Bang) => Ok(any.is_falsy()),
+                    _ => todo!(),                    
+                }
+            }
+            _ => todo!()
         }
     }
 
