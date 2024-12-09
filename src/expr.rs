@@ -1,3 +1,5 @@
+use std::sync::TryLockError;
+
 use crate::scanner::{ Token, TokenType };
 use crate::scanner;
 
@@ -49,14 +51,19 @@ impl LiteralValue {
             _ => panic!("Could not create LiteralValue from {:?}", token),
         }
     }
+
+    pub fn from_bool(b: bool) -> Self {
+        if b { True } else { False }
+    }
+
     pub fn is_falsy(&self) -> LiteralValue {
         match self {
-            Number(x) =>if *x == 0.0 as f32 {True} else {False},
-            StringValue(s) => if s.len() == 0 {True} else {False},
+            Number(x) => if *x == (0.0 as f32) { True } else { False }
+            StringValue(s) => if s.len() == 0 { True } else { False }
             True => False,
             False => True,
             Nil => True,
-         }
+        }
     }
 }
 
@@ -93,7 +100,7 @@ impl Expr {
         }
     }
 
-    pub fn evaluate(&self) -> Result< LiteralValue, String> {
+    pub fn evaluate(&self) -> Result<LiteralValue, String> {
         match self {
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Grouping { expression } => expression.evaluate(),
@@ -101,12 +108,45 @@ impl Expr {
                 let right = right.evaluate()?;
                 match (&right, operator.token_type) {
                     (Number(x), TokenType::Minus) => Ok(Number(-x)),
-                    (_, TokenType::Minus) => return Err(format!("Minus not implemented for {}", right.to_string())),
+                    (_, TokenType::Minus) => {
+                        return Err(format!("Minus not implemented for {}", right.to_string()));
+                    }
                     (any, TokenType::Bang) => Ok(any.is_falsy()),
-                    _ => todo!(),                    
+                    _ => todo!(),
                 }
             }
-            _ => todo!()
+            Expr::Binary { left, operator, right } => {
+                let left = left.evaluate()?;
+                let right = right.evaluate()?;
+
+                match (&left, operator.token_type, &right) {
+                    (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
+                    (Number(x), TokenType::Minus, Number(y)) => Ok(Number(x - y)),
+                    (Number(x), TokenType::Slash, Number(y)) => Ok(Number(x / y)),
+                    (Number(x), TokenType::Star, Number(y)) => Ok(Number(x * y)),
+                    (Number(x), TokenType::Greater, Number(y)) =>
+                        Ok(LiteralValue::from_bool(x > y)),
+                    (Number(x), TokenType::GreaterEqual, Number(y)) =>
+                        Ok(LiteralValue::from_bool(x >= y)),
+                    (Number(x), TokenType::Less, Number(y)) => Ok(LiteralValue::from_bool(x < y)),
+                    (Number(x), TokenType::LessEqual, Number(y)) =>
+                        Ok(LiteralValue::from_bool(x <= y)),
+                    (Number(x), TokenType::BangEqual, Number(y)) =>
+                        Ok(LiteralValue::from_bool(x != y)),
+                    (Number(x), TokenType::EqualEqual, Number(y)) =>
+                        Ok(LiteralValue::from_bool(x == y)),
+
+                    (StringValue(_), _, Number(_)) =>
+                        Err("Cannot operate on string and number".to_string()),
+                    (Number(_), _, StringValue(_)) =>
+                        Err("Cannot operate on string and number".to_string()),
+                    (StringValue(s1), TokenType::Plus, StringValue(s2)) =>
+                        Ok(StringValue(format!("{}{}", s1, s2))),
+
+                    _ => todo!(),
+                }
+            }
+            _ => todo!(),
         }
     }
 
