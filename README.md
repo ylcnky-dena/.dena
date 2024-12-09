@@ -1,12 +1,14 @@
 # `.dena`
 
-<!-- ![dena](https://github.com/ylcnky/Dena/blob/master/logo.png "`.dena`") -->
+![dena](https://github.com/ylcnky/Dena/blob/master/logo.png "`.dena`")
+
 Coding a new programming language named `dena/` with Rust. This project is inspired from the book [Crafting Interpreters](https://craftinginterpreters.com/) which covers almost everything needed to implement a full-featured, efficient programming language. The book cover these steps in [Java](https://www.java.com/en/) language; and this project tries to implement the same stack with Rust.
 
 It is obvious, this development does not cover all the features and functionalities included in the [Crafting Interpreters](https://craftinginterpreters.com/) book. However, many essential features are handled.
 
-## Feature of `.dena` language
+## Features
 * It is a dynamically typed language (`Python` lovers welcome ✅)
+* It does not compile. Code runs with an interpreter
 
 ## Why I named as `.dena`? 
 Why not? 
