@@ -135,13 +135,16 @@ impl Expr {
                         Ok(LiteralValue::from_bool(x != y)),
                     (Number(x), TokenType::EqualEqual, Number(y)) =>
                         Ok(LiteralValue::from_bool(x == y)),
-
-                    (StringValue(_), _, Number(_)) =>
-                        Err("Cannot operate on string and number".to_string()),
-                    (Number(_), _, StringValue(_)) =>
-                        Err("Cannot operate on string and number".to_string()),
+                    (StringValue(_), op, Number(_)) =>
+                        Err(format!("{} is not defined for string and number", op)),
+                    (Number(_), op, StringValue(_)) =>
+                        Err(format!("{} is not defined for string and number", op)),
                     (StringValue(s1), TokenType::Plus, StringValue(s2)) =>
                         Ok(StringValue(format!("{}{}", s1, s2))),
+                    (StringValue(s1), TokenType::EqualEqual, StringValue(s2)) =>
+                        Ok(LiteralValue::from_bool(s1 == s2)),
+                    (StringValue(s1), TokenType::BangEqual, StringValue(s2)) =>
+                        Ok(LiteralValue::from_bool(s1 != s2)),
 
                     _ => todo!(),
                 }
