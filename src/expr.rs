@@ -1,9 +1,7 @@
-use std::sync::TryLockError;
-
 use crate::scanner::{ Token, TokenType };
 use crate::scanner;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
     Number(f32),
     StringValue(String),
@@ -112,7 +110,7 @@ impl Expr {
                         return Err(format!("Minus not implemented for {}", right.to_string()));
                     }
                     (any, TokenType::Bang) => Ok(any.is_falsy()),
-                    _ => todo!(),
+                    (_, ttype) => Err(format!("{} is not valid unary operator", ttype)),
                 }
             }
             Expr::Binary { left, operator, right } => {
@@ -131,22 +129,18 @@ impl Expr {
                     (Number(x), TokenType::Less, Number(y)) => Ok(LiteralValue::from_bool(x < y)),
                     (Number(x), TokenType::LessEqual, Number(y)) =>
                         Ok(LiteralValue::from_bool(x <= y)),
-                    (Number(x), TokenType::BangEqual, Number(y)) =>
-                        Ok(LiteralValue::from_bool(x != y)),
-                    (Number(x), TokenType::EqualEqual, Number(y)) =>
-                        Ok(LiteralValue::from_bool(x == y)),
                     (StringValue(_), op, Number(_)) =>
                         Err(format!("{} is not defined for string and number", op)),
                     (Number(_), op, StringValue(_)) =>
                         Err(format!("{} is not defined for string and number", op)),
                     (StringValue(s1), TokenType::Plus, StringValue(s2)) =>
                         Ok(StringValue(format!("{}{}", s1, s2))),
-                    (StringValue(s1), TokenType::EqualEqual, StringValue(s2)) =>
-                        Ok(LiteralValue::from_bool(s1 == s2)),
-                    (StringValue(s1), TokenType::BangEqual, StringValue(s2)) =>
-                        Ok(LiteralValue::from_bool(s1 != s2)),
-
-                    _ => todo!(),
+                    (x, TokenType::BangEqual, y) => Ok(LiteralValue::from_bool(x != y)),
+                    (x, TokenType::EqualEqual, y) => Ok(LiteralValue::from_bool(x == y)),
+                    (x, ttype, y) =>
+                        Err(
+                            format!("{} is not implemented for operands {:?} and {:?}", ttype, x, y)
+                        ),
                 }
             }
             _ => todo!(),
