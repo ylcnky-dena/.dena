@@ -147,12 +147,13 @@ impl Expr {
                         Ok(StringValue(format!("{}{}", s1, s2))),
                     (x, TokenType::BangEqual, y) => Ok(LiteralValue::from_bool(x != y)),
                     (x, TokenType::EqualEqual, y) => Ok(LiteralValue::from_bool(x == y)),
-                    
+
                     (StringValue(s1), TokenType::Greater, StringValue(s2)) =>
                         Ok(LiteralValue::from_bool(s1 > s2)),
                     (StringValue(s1), TokenType::GreaterEqual, StringValue(s2)) =>
                         Ok(LiteralValue::from_bool(s1 >= s2)),
-                    (StringValue(s1), TokenType::Less, StringValue(s2)) => Ok(LiteralValue::from_bool(s1 < s2)),
+                    (StringValue(s1), TokenType::Less, StringValue(s2)) =>
+                        Ok(LiteralValue::from_bool(s1 < s2)),
                     (StringValue(s1), TokenType::LessEqual, StringValue(s2)) =>
                         Ok(LiteralValue::from_bool(s1 <= s2)),
                     (x, ttype, y) =>
@@ -161,7 +162,6 @@ impl Expr {
                         ),
                 }
             }
-            _ => todo!(),
         }
     }
 
@@ -174,7 +174,6 @@ impl Expr {
 mod tests {
     use super::*;
     use super::Expr::*;
-    use super::LiteralValue::*;
 
     #[test]
     fn pretty_print_ast() {
