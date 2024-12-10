@@ -39,6 +39,16 @@ impl LiteralValue {
         }
     }
 
+    pub fn to_type(&self) -> &str {
+        match self {
+            LiteralValue::Number(_) => "Number",
+            LiteralValue::StringValue(_) => "String",
+            LiteralValue::True => "Boolean",
+            LiteralValue::False => "Boolean",
+            LiteralValue::Nil => "nil",
+        }
+    }
+
     pub fn from_token(token: Token) -> Self {
         match token.token_type {
             TokenType::Number => Self::Number(unwrap_as_f32(token.literal)),
@@ -137,6 +147,14 @@ impl Expr {
                         Ok(StringValue(format!("{}{}", s1, s2))),
                     (x, TokenType::BangEqual, y) => Ok(LiteralValue::from_bool(x != y)),
                     (x, TokenType::EqualEqual, y) => Ok(LiteralValue::from_bool(x == y)),
+                    
+                    (StringValue(s1), TokenType::Greater, StringValue(s2)) =>
+                        Ok(LiteralValue::from_bool(s1 > s2)),
+                    (StringValue(s1), TokenType::GreaterEqual, StringValue(s2)) =>
+                        Ok(LiteralValue::from_bool(s1 >= s2)),
+                    (StringValue(s1), TokenType::Less, StringValue(s2)) => Ok(LiteralValue::from_bool(s1 < s2)),
+                    (StringValue(s1), TokenType::LessEqual, StringValue(s2)) =>
+                        Ok(LiteralValue::from_bool(s1 <= s2)),
                     (x, ttype, y) =>
                         Err(
                             format!("{} is not implemented for operands {:?} and {:?}", ttype, x, y)
