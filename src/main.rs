@@ -5,10 +5,12 @@ mod scanner;
 mod expr;
 mod parser;
 mod interpreter;
+mod stmt;
 
 use interpreter::Interpreter;
 use crate::scanner::*;
 use crate::parser::*;
+use crate::stmt::{ Stmt::* };
 
 fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
@@ -27,9 +29,9 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
     let tokens = scanner.scan_tokens()?;
 
     let mut parser = Parser::new(tokens);
-    let expr = parser.parse()?;
-    let result = interpreter.interpret(expr)?;
-    println!("{}", result.to_string());
+    let smtms = parser.parse()?;
+    interpreter.interpret(smtms);
+
     return Ok(());
 }
 
