@@ -16,7 +16,7 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
-        let mut stmts =  vec![];
+        let mut stmts = vec![];
         let mut errs = vec![];
         while !self.is_at_end() {
             let smtm = self.statement();
@@ -33,24 +33,20 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, String> {
-        if self.match_token(Print) {
-            self.print_statement()
-        } else {
-            self.expression_statement()
-        }
+        if self.match_token(Print) { self.print_statement() } else { self.expression_statement() }
     }
 
     fn print_statement(&mut self) -> Result<Stmt, String> {
         let value = self.expression()?;
-        self.consume(Semicolon, "Expected ';' after value.");
+        self.consume(Semicolon, "Expected ';' after value.")?;
         Ok(Stmt::Print {
-            expression: value
+            expression: value,
         })
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, String> {
         let expr = self.expression()?;
-        self.consume(Semicolon, "Expected ';' after expression");
+        self.consume(Semicolon, "Expected ';' after expression")?;
         Ok(Stmt::Expression { expression: expr })
     }
 
