@@ -77,6 +77,10 @@ impl LiteralValue {
 }
 
 pub enum Expr {
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         operator: Token,
@@ -100,6 +104,7 @@ pub enum Expr {
 impl Expr {
     pub fn to_string(&self) -> String {
         match self {
+            Expr::Assign { name, value } => format!("({name:?} = {}", value.to_string()),
             Expr::Binary { left, operator, right } =>
                 format!("({} {} {})", operator.lexeme, left.to_string(), right.to_string()),
             Expr::Grouping { expression } => format!("(group {})", (*expression).to_string()),
@@ -113,8 +118,19 @@ impl Expr {
         }
     }
 
-    pub fn evaluate(&self, environment: &Environment) -> Result<LiteralValue, String> {
+    pub fn evaluate(&self, environment: &mut Environment) -> Result<LiteralValue, String> {
         match self {
+            Expr::Assign { name, value } => {
+                let get_value = environment.get(&name.lexeme);
+                match get_value {
+                    Some(_) => {
+                        let new_value = (*value).evaluate(environment)?;
+                        environment.define(name.lexeme.clone(), new_value.clone());
+                        Ok(new_value)
+                    }
+                    None => Err(format!("Variable {name:?} has not been declared")),
+                }
+            }
             Expr::Variable { name } => {
                 match environment.get(&name.lexeme) {
                     Some(value) => Ok(value.clone()),

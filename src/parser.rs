@@ -1,6 +1,6 @@
 use crate::expr::{ Expr, Expr::*, LiteralValue };
 use crate::scanner::{ Token, TokenType, TokenType::* };
-use crate::stmt::{ Stmt };
+use crate::stmt::Stmt;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -81,7 +81,27 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, String> {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, String> {
+        let expr = self.equality()?;
+
+        if self.match_token(Eqaual) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+
+            match expr {
+                Variable { name } =>
+                    Ok(Assign {
+                        name,
+                        value: Box::from(value),
+                    }),
+                _ => panic!("Invalid assignment target"),
+            }
+        } else {
+            Ok(expr)
+        }
     }
 
     fn equality(&mut self) -> Result<Expr, String> {
