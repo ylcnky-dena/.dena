@@ -1,5 +1,6 @@
 use crate::scanner::{ Token, TokenType };
-use crate::scanner;
+use crate::{ environment, scanner };
+use crate::environment::Environment;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
@@ -91,6 +92,9 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Variable {
+        name: Token,
+    },
 }
 
 impl Expr {
@@ -105,15 +109,22 @@ impl Expr {
                 let right_str = (*right).to_string();
                 format!("({} {})", operator_str, right_str)
             }
+            Expr::Variable { name } => format!("(var {})", name.lexeme),
         }
     }
 
-    pub fn evaluate(&self) -> Result<LiteralValue, String> {
+    pub fn evaluate(&self, environment: &Environment) -> Result<LiteralValue, String> {
         match self {
+            Expr::Variable { name } => {
+                match environment.get(&name.lexeme) {
+                    Some(value) => Ok(value.clone()),
+                    None => Err(format!("Variable '{}' has not been declared", name.lexeme)),
+                }
+            }
             Expr::Literal { value } => Ok((*value).clone()),
-            Expr::Grouping { expression } => expression.evaluate(),
+            Expr::Grouping { expression } => expression.evaluate(environment),
             Expr::Unary { operator, right } => {
-                let right = right.evaluate()?;
+                let right = right.evaluate(environment)?;
                 match (&right, operator.token_type) {
                     (Number(x), TokenType::Minus) => Ok(Number(-x)),
                     (_, TokenType::Minus) => {
@@ -124,8 +135,8 @@ impl Expr {
                 }
             }
             Expr::Binary { left, operator, right } => {
-                let left = left.evaluate()?;
-                let right = right.evaluate()?;
+                let left = left.evaluate(environment)?;
+                let right = right.evaluate(environment)?;
 
                 match (&left, operator.token_type, &right) {
                     (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),

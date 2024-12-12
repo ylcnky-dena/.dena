@@ -1,6 +1,6 @@
 use crate::expr::{ Expr, Expr::*, LiteralValue };
 use crate::scanner::{ Token, TokenType, TokenType::* };
-use crate::stmt::Stmt;
+use crate::stmt::{ Stmt };
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -19,10 +19,13 @@ impl Parser {
         let mut stmts = vec![];
         let mut errs = vec![];
         while !self.is_at_end() {
-            let smtm = self.statement();
+            let smtm = self.declaration();
             match smtm {
                 Ok(s) => stmts.push(s),
-                Err(msg) => errs.push(msg),
+                Err(msg) => {
+                    errs.push(msg);
+                    self.synchronize();
+                }
             }
         }
         if errs.len() == 0 {
@@ -30,6 +33,33 @@ impl Parser {
         } else {
             Err(errs.join("\n"))
         }
+    }
+
+    fn declaration(&mut self) -> Result<Stmt, String> {
+        if self.match_token(Var) {
+            match self.var_declaration() {
+                Ok(stmt) => Ok(stmt),
+                Err(msg) => {
+                    // self.synchronize();
+                    Err(msg)
+                }
+            }
+        } else {
+            self.statement()
+        }
+    }
+
+    fn var_declaration(&mut self) -> Result<Stmt, String> {
+        let token = self.consume(Identifier, "Expected variable name")?;
+        let initializer;
+        if self.match_token(Eqaual) {
+            initializer = self.expression()?;
+        } else {
+            initializer = Literal { value: LiteralValue::Nil };
+        }
+        self.consume(Semicolon, "Expected ';' after variable declaration")?;
+
+        Ok(Stmt::Var { name: token, initializer: initializer })
     }
 
     fn statement(&mut self) -> Result<Stmt, String> {
@@ -142,6 +172,10 @@ impl Parser {
                     value: LiteralValue::from_token(token),
                 };
             }
+            Identifier => {
+                self.advance();
+                result = Variable { name: self.previous() };
+            }
             _ => {
                 return Err("Expected expression".to_string());
             }
@@ -150,11 +184,12 @@ impl Parser {
         Ok(result)
     }
 
-    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<(), String> {
+    fn consume(&mut self, token_type: TokenType, msg: &str) -> Result<Token, String> {
         let token = self.peek();
         if token.token_type == token_type {
             self.advance();
-            Ok(())
+            let token = self.previous();
+            Ok(token)
         } else {
             Err(msg.to_string())
         }

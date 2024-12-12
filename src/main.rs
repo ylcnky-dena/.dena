@@ -6,6 +6,7 @@ mod expr;
 mod parser;
 mod interpreter;
 mod stmt;
+mod environment;
 
 use interpreter::Interpreter;
 use crate::scanner::*;
@@ -30,7 +31,7 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
 
     let mut parser = Parser::new(tokens);
     let smtms = parser.parse()?;
-    interpreter.interpret(smtms);
+    interpreter.interpret(smtms)?;
 
     return Ok(());
 }
