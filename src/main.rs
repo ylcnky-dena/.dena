@@ -11,7 +11,7 @@ mod environment;
 use interpreter::Interpreter;
 use crate::scanner::*;
 use crate::parser::*;
-use crate::stmt::{ Stmt::* };
+//use crate::stmt::Stmt::*;
 
 fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();

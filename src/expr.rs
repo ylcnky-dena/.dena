@@ -1,5 +1,5 @@
 use crate::scanner::{ Token, TokenType };
-use crate::{ environment, scanner };
+use crate::scanner;
 use crate::environment::Environment;
 
 #[derive(Debug, Clone, PartialEq)]
