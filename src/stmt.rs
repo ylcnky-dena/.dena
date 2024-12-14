@@ -13,3 +13,14 @@ pub enum Stmt {
         initializer: Expr,
     },
 }
+
+impl Stmt {
+    pub fn to_string(&self) -> String {
+        use Stmt::*;
+        match self {
+            Expression { expression } => expression.to_string(),
+            Print { expression } => format!("(print {})", expression.to_string()),
+            Var { name, initializer } => format!("(var {})", name.lexeme),
+        }
+    }
+}
