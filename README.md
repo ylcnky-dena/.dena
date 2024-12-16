@@ -7,22 +7,29 @@ It is obvious that this development does not cover all the features and function
 ## Features
 * It is a dynamically typed language (`Python` lovers welcome ✅). Code runs with an interpreter.
 * Memory management with a garbage collector.
+### **Data Types**: 
 * It is a bit generic language. So not so many data types are supported except the followings:
     * `Booleans`
     * `Numbers`
     * `Strings`
     * `Nil` (or `null` in Java or C)
-* Following expressions are supported:
-    * **Arithmetic**: simple math operands (`+`, `-`, `*`, `/`)
-    * **Comparison** and **Equality**: operators which return a `bool` which we can compare numbers (`<`, `>`, `=<`, `>=`, `==`)
-    * Logical Operators: to define `true` or `false` booleans. `!` returns `false` if its operand is `true`
+### **Expressions**: Following expressions are supported:
+* **Arithmetic**: simple math operands (`+`, `-`, `*`, `/`)
+* **Comparison** and **Equality**: operators which return a `bool` which we can compare numbers (`<`, `>`, `=<`, `>=`, `==`)
+* **Logical Operators**: to define `true` or `false` booleans. `!` returns `false` if its operand is `true`
         * `!true` --> `false`
         * `!false` --> `true`
     * The other two logical operands really are control flow. An `and` expression determines if two values are *both* `true`.
     * And an `or` expression determines if *either* of two values are true.
         * `false` or `false` --> `false`
         * `true` or `false` --> `true`
-    * Precedence and Grouping: All of the above operators have the same precedence. You can use `()` to group the stuff. `var agerage = (min + max) / 2;`
+* **Precedence and Grouping**: All of the above operators have the same precedence. You can use `()` to group the stuff. `var agerage = (min + max) / 2;`
+### **Statements**:
+* Where an expression's main job is to produce *value*, a statement's job is to produce an *effect*. Statements do not evaluate to a value. An expression followed by a semicolon `;` promotes the expression to statement-hood. This is called an expression statement.
+
+### **Variables**:
+TBC...
+
 
 
 * The language can be run via Rust by typing `cargo r`, starting an interpreter in Terminal (or CMD)
