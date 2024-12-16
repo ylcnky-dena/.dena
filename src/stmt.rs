@@ -12,6 +12,9 @@ pub enum Stmt {
         name: Token,
         initializer: Expr,
     },
+    Block {
+        statements: Vec<Stmt>,
+    },
 }
 
 impl Stmt {
@@ -21,6 +24,14 @@ impl Stmt {
             Expression { expression } => expression.to_string(),
             Print { expression } => format!("(print {})", expression.to_string()),
             Var { name, initializer } => format!("(var {})", name.lexeme),
+            Block { statements } =>
+                format!(
+                    "(block {})",
+                    statements
+                        .into_iter()
+                        .map(|stmt| stmt.to_string())
+                        .collect::<String>()
+                ),
         }
     }
 }
