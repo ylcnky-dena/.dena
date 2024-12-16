@@ -4,7 +4,7 @@ Coding a new programming language named `.dena`. This project is inspired from t
 
 It is obvious that this development does not cover all the features and functionalities included in the [Crafting Interpreters](https://craftinginterpreters.com/) book. However, many essential features are handled.
 
-## Features
+# Features
 * It is a dynamically typed language (`Python` lovers welcome ✅). Code runs with an interpreter.
 * Memory management with a garbage collector.
 ### **Data Types**: 
@@ -31,9 +31,6 @@ It is obvious that this development does not cover all the features and function
 TBC...
 
 
-
-* The language can be run via Rust by typing `cargo r`, starting an interpreter in Terminal (or CMD)
-* Code snippets can be saved in files with `.dena` extension (i.e `my_program.dena`)
 
 ## How to build?
 Since the background of this code is based on Rust, you can use the `cargo`.
