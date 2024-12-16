@@ -1,17 +1,17 @@
-use std::{ env, fs, process::exit };
-use std::io::{ self, BufRead, Write };
-
-mod scanner;
 mod expr;
-mod parser;
 mod interpreter;
+mod parser;
+mod scanner;
 mod stmt;
 mod environment;
-
-use interpreter::Interpreter;
-use crate::scanner::*;
+use crate::interpreter::*;
 use crate::parser::*;
-//use crate::stmt::Stmt::*;
+use crate::scanner::*;
+
+use std::env;
+use std::fs;
+use std::io::{ self, BufRead, Write };
+use std::process::exit;
 
 fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
@@ -30,9 +30,8 @@ fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
     let tokens = scanner.scan_tokens()?;
 
     let mut parser = Parser::new(tokens);
-    let smtms = parser.parse()?;
-    interpreter.interpret(smtms)?;
-
+    let stmts = parser.parse()?;
+    interpreter.interpret(stmts)?;
     return Ok(());
 }
 
@@ -40,7 +39,6 @@ fn run_prompt() -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     loop {
         print!("> ");
-        let mut buffer = String::new();
         match io::stdout().flush() {
             Ok(_) => (),
             Err(_) => {
@@ -48,6 +46,7 @@ fn run_prompt() -> Result<(), String> {
             }
         }
 
+        let mut buffer = String::new();
         let stdin = io::stdin();
         let mut handle = stdin.lock();
         match handle.read_line(&mut buffer) {
@@ -57,9 +56,10 @@ fn run_prompt() -> Result<(), String> {
                 }
             }
             Err(_) => {
-                return Err("Couldn't read line".to_string());
+                return Err("Couldnt read line".to_string());
             }
         }
+
         println!("ECHO: {}", buffer);
         match run(&mut interpreter, &buffer) {
             Ok(_) => (),
@@ -72,7 +72,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 2 {
-        println!("Usage: dena [script]");
+        println!("Usage: jlox [script]");
         exit(64);
     } else if args.len() == 2 {
         match run_file(&args[1]) {
@@ -86,7 +86,7 @@ fn main() {
         match run_prompt() {
             Ok(_) => exit(0),
             Err(msg) => {
-                println!("ERROR:\n{}", msg);
+                println!("ERROR\n{}", msg);
                 exit(1);
             }
         }

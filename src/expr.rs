@@ -1,6 +1,6 @@
-use crate::scanner::{ Token, TokenType };
-use crate::scanner;
 use crate::environment::Environment;
+use crate::scanner;
+use crate::scanner::{ Token, TokenType };
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
@@ -10,7 +10,6 @@ pub enum LiteralValue {
     False,
     Nil,
 }
-
 use LiteralValue::*;
 
 fn unwrap_as_f32(literal: Option<scanner::LiteralValue>) -> f32 {
@@ -24,7 +23,7 @@ fn unwrap_as_f32(literal: Option<scanner::LiteralValue>) -> f32 {
 fn unwrap_as_string(literal: Option<scanner::LiteralValue>) -> String {
     match literal {
         Some(scanner::LiteralValue::StringValue(s)) => s.clone(),
-        Some(scanner::LiteralValue::IdentifierValue(s)) => s.clone(),
+        Some(scanner::LiteralValue::IdentifierVal(s)) => s.clone(),
         _ => panic!("Could not unwrap as string"),
     }
 }
@@ -67,8 +66,12 @@ impl LiteralValue {
 
     pub fn is_falsy(&self) -> LiteralValue {
         match self {
-            Number(x) => if *x == (0.0 as f32) { True } else { False }
-            StringValue(s) => if s.len() == 0 { True } else { False }
+            Number(x) => {
+                if *x == (0.0 as f32) { True } else { False }
+            }
+            StringValue(s) => {
+                if s.len() == 0 { True } else { False }
+            }
             True => False,
             False => True,
             Nil => True,
@@ -76,6 +79,7 @@ impl LiteralValue {
     }
 }
 
+#[derive(Debug)]
 pub enum Expr {
     Assign {
         name: Token,
@@ -123,30 +127,29 @@ impl Expr {
             Expr::Assign { name, value } => {
                 let new_value = (*value).evaluate(environment)?;
                 let assign_success = environment.assign(&name.lexeme, new_value.clone());
-
                 if assign_success {
                     Ok(new_value)
                 } else {
-                    Err(format!("Variable '{}' has not been declared", name.lexeme))
+                    Err(format!("Variable {} has not been declared", name.lexeme))
                 }
             }
-            Expr::Variable { name } => {
+            Expr::Variable { name } =>
                 match environment.get(&name.lexeme) {
                     Some(value) => Ok(value.clone()),
                     None => Err(format!("Variable '{}' has not been declared", name.lexeme)),
                 }
-            }
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Grouping { expression } => expression.evaluate(environment),
             Expr::Unary { operator, right } => {
                 let right = right.evaluate(environment)?;
+
                 match (&right, operator.token_type) {
                     (Number(x), TokenType::Minus) => Ok(Number(-x)),
                     (_, TokenType::Minus) => {
-                        return Err(format!("Minus not implemented for {}", right.to_string()));
+                        Err(format!("Minus not implemented for {}", right.to_type()))
                     }
                     (any, TokenType::Bang) => Ok(any.is_falsy()),
-                    (_, ttype) => Err(format!("{} is not valid unary operator", ttype)),
+                    (_, ttype) => Err(format!("{} is not a valid unary operator", ttype)),
                 }
             }
             Expr::Binary { left, operator, right } => {
@@ -156,32 +159,44 @@ impl Expr {
                 match (&left, operator.token_type, &right) {
                     (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
                     (Number(x), TokenType::Minus, Number(y)) => Ok(Number(x - y)),
-                    (Number(x), TokenType::Slash, Number(y)) => Ok(Number(x / y)),
                     (Number(x), TokenType::Star, Number(y)) => Ok(Number(x * y)),
-                    (Number(x), TokenType::Greater, Number(y)) =>
-                        Ok(LiteralValue::from_bool(x > y)),
-                    (Number(x), TokenType::GreaterEqual, Number(y)) =>
-                        Ok(LiteralValue::from_bool(x >= y)),
+                    (Number(x), TokenType::Slash, Number(y)) => Ok(Number(x / y)),
+                    (Number(x), TokenType::Greater, Number(y)) => {
+                        Ok(LiteralValue::from_bool(x > y))
+                    }
+                    (Number(x), TokenType::GreaterEqual, Number(y)) => {
+                        Ok(LiteralValue::from_bool(x >= y))
+                    }
                     (Number(x), TokenType::Less, Number(y)) => Ok(LiteralValue::from_bool(x < y)),
-                    (Number(x), TokenType::LessEqual, Number(y)) =>
-                        Ok(LiteralValue::from_bool(x <= y)),
-                    (StringValue(_), op, Number(_)) =>
-                        Err(format!("{} is not defined for string and number", op)),
-                    (Number(_), op, StringValue(_)) =>
-                        Err(format!("{} is not defined for string and number", op)),
-                    (StringValue(s1), TokenType::Plus, StringValue(s2)) =>
-                        Ok(StringValue(format!("{}{}", s1, s2))),
+                    (Number(x), TokenType::LessEqual, Number(y)) => {
+                        Ok(LiteralValue::from_bool(x <= y))
+                    }
+
+                    (StringValue(_), op, Number(_)) => {
+                        Err(format!("{} is not defined for string and number", op))
+                    }
+                    (Number(_), op, StringValue(_)) => {
+                        Err(format!("{} is not defined for string and number", op))
+                    }
+
+                    (StringValue(s1), TokenType::Plus, StringValue(s2)) => {
+                        Ok(StringValue(format!("{}{}", s1, s2)))
+                    }
+
                     (x, TokenType::BangEqual, y) => Ok(LiteralValue::from_bool(x != y)),
                     (x, TokenType::EqualEqual, y) => Ok(LiteralValue::from_bool(x == y)),
-
-                    (StringValue(s1), TokenType::Greater, StringValue(s2)) =>
-                        Ok(LiteralValue::from_bool(s1 > s2)),
-                    (StringValue(s1), TokenType::GreaterEqual, StringValue(s2)) =>
-                        Ok(LiteralValue::from_bool(s1 >= s2)),
-                    (StringValue(s1), TokenType::Less, StringValue(s2)) =>
-                        Ok(LiteralValue::from_bool(s1 < s2)),
-                    (StringValue(s1), TokenType::LessEqual, StringValue(s2)) =>
-                        Ok(LiteralValue::from_bool(s1 <= s2)),
+                    (StringValue(s1), TokenType::Greater, StringValue(s2)) => {
+                        Ok(LiteralValue::from_bool(s1 > s2))
+                    }
+                    (StringValue(s1), TokenType::GreaterEqual, StringValue(s2)) => {
+                        Ok(LiteralValue::from_bool(s1 >= s2))
+                    }
+                    (StringValue(s1), TokenType::Less, StringValue(s2)) => {
+                        Ok(LiteralValue::from_bool(s1 < s2))
+                    }
+                    (StringValue(s1), TokenType::LessEqual, StringValue(s2)) => {
+                        Ok(LiteralValue::from_bool(s1 <= s2))
+                    }
                     (x, ttype, y) =>
                         Err(
                             format!("{} is not implemented for operands {:?} and {:?}", ttype, x, y)
@@ -198,9 +213,9 @@ impl Expr {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::Expr::*;
-
+    use super::LiteralValue::*;
+    use super::*;
     #[test]
     fn pretty_print_ast() {
         let minus_token = Token {
@@ -209,8 +224,14 @@ mod tests {
             literal: None,
             line_number: 0,
         };
-        let onetwothree = Literal { value: Number(123.0) };
-        let group = Grouping { expression: Box::from(Literal { value: Number(45.67) }) };
+        let onetwothree = Literal {
+            value: Number(123.0),
+        };
+        let group = Grouping {
+            expression: Box::from(Literal {
+                value: Number(45.67),
+            }),
+        };
         let multi = Token {
             token_type: TokenType::Star,
             lexeme: "*".to_string(),
@@ -218,10 +239,14 @@ mod tests {
             line_number: 0,
         };
         let ast = Binary {
-            left: Box::from(Unary { operator: minus_token, right: Box::from(onetwothree) }),
+            left: Box::from(Unary {
+                operator: minus_token,
+                right: Box::from(onetwothree),
+            }),
             operator: multi,
             right: Box::from(group),
         };
+
         let result = ast.to_string();
         assert_eq!(result, "(* (- 123) (group 45.67))");
     }

@@ -1,4 +1,5 @@
-use std::{ collections::HashMap, string::String };
+use std::collections::HashMap;
+use std::string::String;
 
 fn is_digit(ch: char) -> bool {
     (ch as u8) >= ('0' as u8) && (ch as u8) <= ('9' as u8)
@@ -14,6 +15,7 @@ fn is_alpha(ch: char) -> bool {
 fn is_alpha_numeric(ch: char) -> bool {
     is_alpha(ch) || is_digit(ch)
 }
+
 fn get_keywords_hashmap() -> HashMap<&'static str, TokenType> {
     HashMap::from([
         ("and", And),
@@ -66,6 +68,7 @@ impl Scanner {
                 Err(msg) => errors.push(msg),
             }
         }
+
         self.tokens.push(Token {
             token_type: Eof,
             lexeme: "".to_string(),
@@ -81,8 +84,12 @@ impl Scanner {
             }
             return Err(joined);
         }
+
         Ok(self.tokens.clone())
     }
+
+    // var test = 0.01;
+
     fn is_at_end(self: &Self) -> bool {
         self.current >= self.source.len()
     }
@@ -111,15 +118,18 @@ impl Scanner {
                 self.add_token(token);
             }
             '=' => {
-                let token = if self.char_match('=') { EqualEqual } else { Eqaual };
+                let token = if self.char_match('=') { EqualEqual } else { Equal };
+
                 self.add_token(token);
             }
             '<' => {
                 let token = if self.char_match('=') { LessEqual } else { Less };
+
                 self.add_token(token);
             }
             '>' => {
                 let token = if self.char_match('=') { GreaterEqual } else { Greater };
+
                 self.add_token(token);
             }
             '/' => {
@@ -139,16 +149,18 @@ impl Scanner {
                 self.line += 1;
             }
             '"' => self.string()?,
+
             c => {
                 if is_digit(c) {
                     self.number()?;
                 } else if is_alpha(c) {
                     self.identifier();
                 } else {
-                    return Err(format!("Unrecognized char at line: {}: {}", self.line, c));
+                    return Err(format!("Unrecognized char at line {}: {}", self.line, c));
                 }
             }
         }
+
         Ok(())
     }
 
@@ -185,6 +197,7 @@ impl Scanner {
                 return Err(format!("Could not parse number: {}", substring));
             }
         }
+
         Ok(())
     }
 
@@ -210,6 +223,7 @@ impl Scanner {
         if self.is_at_end() {
             return Err("Unterminated string".to_string());
         }
+
         self.advance();
 
         let value = &self.source[self.start + 1..self.current - 1];
@@ -244,6 +258,7 @@ impl Scanner {
 
         c
     }
+
     fn add_token(self: &mut Self, token_type: TokenType) {
         self.add_token_lit(token_type, None);
     }
@@ -260,9 +275,9 @@ impl Scanner {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TokenType {
-    // Signle-char tokens
+    // Single-char tokens
     LeftParen,
     RightParen,
     LeftBrace,
@@ -275,10 +290,10 @@ pub enum TokenType {
     Slash,
     Star,
 
-    // One or two chars
+    // One Or Two Chars
     Bang,
     BangEqual,
-    Eqaual,
+    Equal,
     EqualEqual,
     Greater,
     GreaterEqual,
@@ -311,6 +326,7 @@ pub enum TokenType {
     Eof,
 }
 use TokenType::*;
+
 impl std::fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -322,9 +338,8 @@ pub enum LiteralValue {
     IntValue(i64),
     FValue(f64),
     StringValue(String),
-    IdentifierValue(String),
+    IdentifierVal(String),
 }
-
 use LiteralValue::*;
 
 #[derive(Debug, Clone)]
@@ -351,7 +366,7 @@ impl Token {
     }
 
     pub fn to_string(self: &Self) -> String {
-        format!(" {} {} {:?}", self.token_type, self.lexeme, self.literal)
+        format!("{} {} {:?}", self.token_type, self.lexeme, self.literal)
     }
 }
 
@@ -394,7 +409,6 @@ mod tests {
         let source = r#""ABC""#;
         let mut scanner = Scanner::new(source);
         scanner.scan_tokens().unwrap();
-
         assert_eq!(scanner.tokens.len(), 2);
         assert_eq!(scanner.tokens[0].token_type, StringLit);
         match scanner.tokens[0].literal.as_ref().unwrap() {
@@ -419,7 +433,6 @@ mod tests {
         let source = "\"ABC\ndef\"";
         let mut scanner = Scanner::new(source);
         scanner.scan_tokens().unwrap();
-
         assert_eq!(scanner.tokens.len(), 2);
         assert_eq!(scanner.tokens[0].token_type, StringLit);
         match scanner.tokens[0].literal.as_ref().unwrap() {
@@ -453,7 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn get_identifier() {
+    fn get_identifer() {
         let source = "this_is_a_var = 12;";
         let mut scanner = Scanner::new(source);
         scanner.scan_tokens().unwrap();
@@ -461,7 +474,7 @@ mod tests {
         assert_eq!(scanner.tokens.len(), 5);
 
         assert_eq!(scanner.tokens[0].token_type, Identifier);
-        assert_eq!(scanner.tokens[1].token_type, Eqaual);
+        assert_eq!(scanner.tokens[1].token_type, Equal);
         assert_eq!(scanner.tokens[2].token_type, Number);
         assert_eq!(scanner.tokens[3].token_type, Semicolon);
         assert_eq!(scanner.tokens[4].token_type, Eof);
@@ -477,7 +490,7 @@ mod tests {
 
         assert_eq!(scanner.tokens[0].token_type, Var);
         assert_eq!(scanner.tokens[1].token_type, Identifier);
-        assert_eq!(scanner.tokens[2].token_type, Eqaual);
+        assert_eq!(scanner.tokens[2].token_type, Equal);
         assert_eq!(scanner.tokens[3].token_type, Number);
         assert_eq!(scanner.tokens[4].token_type, Semicolon);
         assert_eq!(scanner.tokens[5].token_type, While);
@@ -490,4 +503,3 @@ mod tests {
         assert_eq!(scanner.tokens[12].token_type, Eof);
     }
 }
-// Scanner implementation is completed .dena --> 05.12.2024

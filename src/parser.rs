@@ -18,9 +18,10 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = vec![];
         let mut errs = vec![];
+
         while !self.is_at_end() {
-            let smtm = self.declaration();
-            match smtm {
+            let stmt = self.declaration();
+            match stmt {
                 Ok(s) => stmts.push(s),
                 Err(msg) => {
                     errs.push(msg);
@@ -28,6 +29,7 @@ impl Parser {
                 }
             }
         }
+
         if errs.len() == 0 {
             Ok(stmts)
         } else {
@@ -51,25 +53,31 @@ impl Parser {
 
     fn var_declaration(&mut self) -> Result<Stmt, String> {
         let token = self.consume(Identifier, "Expected variable name")?;
+
         let initializer;
-        if self.match_token(Eqaual) {
+        if self.match_token(Equal) {
             initializer = self.expression()?;
         } else {
-            initializer = Literal { value: LiteralValue::Nil };
+            initializer = Literal {
+                value: LiteralValue::Nil,
+            };
         }
+
         self.consume(Semicolon, "Expected ';' after variable declaration")?;
 
-        Ok(Stmt::Var { name: token, initializer: initializer })
+        Ok(Stmt::Var {
+            name: token,
+            initializer: initializer,
+        })
     }
 
     fn statement(&mut self) -> Result<Stmt, String> {
-        if self.match_token(Print) { 
-            self.print_statement() 
+        if self.match_token(Print) {
+            self.print_statement()
         } else if self.match_token(LeftBrace) {
             self.block_statement()
-        }
-         else { 
-            self.expression_statement() 
+        } else {
+            self.expression_statement()
         }
     }
 
@@ -80,6 +88,7 @@ impl Parser {
             let decl = self.declaration()?;
             statements.push(decl);
         }
+
         self.consume(RightBrace, "Expected '}' after a block");
         Ok(Stmt::Block { statements })
     }
@@ -87,14 +96,12 @@ impl Parser {
     fn print_statement(&mut self) -> Result<Stmt, String> {
         let value = self.expression()?;
         self.consume(Semicolon, "Expected ';' after value.")?;
-        Ok(Stmt::Print {
-            expression: value,
-        })
+        Ok(Stmt::Print { expression: value })
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, String> {
         let expr = self.expression()?;
-        self.consume(Semicolon, "Expected ';' after expression")?;
+        self.consume(Semicolon, "Expected ';' after expression.")?;
         Ok(Stmt::Expression { expression: expr })
     }
 
@@ -105,7 +112,7 @@ impl Parser {
     fn assignment(&mut self) -> Result<Expr, String> {
         let expr = self.equality()?;
 
-        if self.match_token(Eqaual) {
+        if self.match_token(Equal) {
             let equals = self.previous();
             let value = self.assignment()?;
 
@@ -115,7 +122,7 @@ impl Parser {
                         name,
                         value: Box::from(value),
                     }),
-                _ => panic!("Invalid assignment target"),
+                _ => Err("Invalid assignment target.".to_string()),
             }
         } else {
             Ok(expr)
@@ -129,15 +136,17 @@ impl Parser {
             let rhs = self.comparison()?;
             expr = Binary {
                 left: Box::from(expr),
-                operator,
+                operator: operator,
                 right: Box::from(rhs),
             };
         }
+
         Ok(expr)
     }
 
     fn comparison(&mut self) -> Result<Expr, String> {
         let mut expr = self.term()?;
+
         while self.match_tokens(&[Greater, GreaterEqual, Less, LessEqual]) {
             let op = self.previous();
             let rhs = self.term()?;
@@ -147,11 +156,13 @@ impl Parser {
                 right: Box::from(rhs),
             };
         }
+
         Ok(expr)
     }
 
     fn term(&mut self) -> Result<Expr, String> {
         let mut expr = self.factor()?;
+
         while self.match_tokens(&[Minus, Plus]) {
             let op = self.previous();
             let rhs = self.factor()?;
@@ -161,6 +172,7 @@ impl Parser {
                 right: Box::from(rhs),
             };
         }
+
         Ok(expr)
     }
 
@@ -175,6 +187,7 @@ impl Parser {
                 right: Box::from(rhs),
             };
         }
+
         Ok(expr)
     }
 
@@ -194,7 +207,6 @@ impl Parser {
     fn primary(&mut self) -> Result<Expr, String> {
         let token = self.peek();
         let result;
-
         match token.token_type {
             LeftParen => {
                 self.advance();
@@ -212,7 +224,9 @@ impl Parser {
             }
             Identifier => {
                 self.advance();
-                result = Variable { name: self.previous() };
+                result = Variable {
+                    name: self.previous(),
+                };
             }
             _ => {
                 return Err("Expected expression".to_string());
@@ -233,13 +247,13 @@ impl Parser {
         }
     }
 
-    fn check(&mut self, typ:TokenType) -> bool {
+    fn check(&mut self, typ: TokenType) -> bool {
         self.peek().token_type == typ
     }
 
     fn match_token(&mut self, typ: TokenType) -> bool {
         if self.is_at_end() {
-            return false;
+            false
         } else {
             if self.peek().token_type == typ {
                 self.advance();
@@ -256,6 +270,7 @@ impl Parser {
                 return true;
             }
         }
+
         false
     }
 
@@ -263,6 +278,7 @@ impl Parser {
         if !self.is_at_end() {
             self.current += 1;
         }
+
         self.previous()
     }
 
@@ -301,7 +317,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ scanner::LiteralValue::*, Scanner };
+    use crate::scanner::{ LiteralValue::*, Scanner };
 
     #[test]
     fn test_addition() {
@@ -348,7 +364,7 @@ mod tests {
         let parsed_expr = parser.parse().unwrap();
         let string_expr = parsed_expr[0].to_string();
 
-        assert_eq!(string_expr, "(== (+ 1 2) (+ 5 7))")
+        assert_eq!(string_expr, "(== (+ 1 2) (+ 5 7))");
     }
 
     #[test]
@@ -358,8 +374,8 @@ mod tests {
         let tokens = scanner.scan_tokens().unwrap();
         let mut parser = Parser::new(tokens);
         let parsed_expr = parser.parse().unwrap();
-        let string_expr = parsed_expr.to_string();
+        let string_expr = parsed_expr[0].to_string();
 
-        assert_eq!(string_expr, "(== 1 (group (+ 2 2)))")
+        assert_eq!(string_expr, "(== 1 (group (+ 2 2)))");
     }
 }
