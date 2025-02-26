@@ -1,5 +1,5 @@
-use crate::expr::{ Expr, Expr::*, LiteralValue };
-use crate::scanner::{ Token, TokenType, TokenType::* };
+use crate::expr::{Expr, Expr::*, LiteralValue};
+use crate::scanner::{Token, TokenType, TokenType::*};
 use crate::stmt::Stmt;
 
 pub struct Parser {
@@ -76,9 +76,31 @@ impl Parser {
             self.print_statement()
         } else if self.match_token(LeftBrace) {
             self.block_statement()
+        } else if self.match_token(If) {
+            self.if_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, String> {
+        self.consume(LeftParen, "Expected '(' after 'if'")?;
+        let predicate = self.expression()?;
+        self.consume(RightParen, "Expected ')' after if-predicate")?;
+
+        let then = Box::new(self.statement()?);
+        let els = if self.match_token(Else) {
+            let stm = self.statement()?;
+            Some(Box::new(stm))
+        } else {
+            None
+        };
+
+        Ok(Stmt::IfStmt {
+            predicate,
+            then,
+            els,
+        })
     }
 
     fn block_statement(&mut self) -> Result<Stmt, String> {
@@ -117,11 +139,10 @@ impl Parser {
             let value = self.assignment()?;
 
             match expr {
-                Variable { name } =>
-                    Ok(Assign {
-                        name,
-                        value: Box::from(value),
-                    }),
+                Variable { name } => Ok(Assign {
+                    name,
+                    value: Box::from(value),
+                }),
                 _ => Err("Invalid assignment target.".to_string()),
             }
         } else {
@@ -220,7 +241,7 @@ impl Parser {
                 self.advance();
                 result = Literal {
                     value: LiteralValue::from_token(token),
-                };
+                }
             }
             Identifier => {
                 self.advance();
@@ -228,9 +249,7 @@ impl Parser {
                     name: self.previous(),
                 };
             }
-            _ => {
-                return Err("Expected expression".to_string());
-            }
+            _ => return Err("Expected expression".to_string()),
         }
 
         Ok(result)
@@ -303,9 +322,7 @@ impl Parser {
             }
 
             match self.peek().token_type {
-                Class | Fun | Var | For | If | While | Print | Return => {
-                    return;
-                }
+                Class | Fun | Var | For | If | While | Print | Return => return,
                 _ => (),
             }
 
@@ -317,7 +334,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanner::{ LiteralValue::*, Scanner };
+    use crate::scanner::{LiteralValue::*, Scanner};
 
     #[test]
     fn test_addition() {

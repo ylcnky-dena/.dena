@@ -1,4 +1,5 @@
 use crate::environment::Environment;
+use crate::expr::{Expr, LiteralValue};
 use crate::stmt::Stmt;
 use std::rc::Rc;
 
@@ -18,24 +19,21 @@ impl Interpreter {
             match stmt {
                 Stmt::Expression { expression } => {
                     expression.evaluate(
-                        Rc::get_mut(&mut self.environment).expect(
-                            "Could not get mutable reference to environment"
-                        )
+                        Rc::get_mut(&mut self.environment)
+                            .expect("Could not get mutable reference to environment"),
                     )?;
                 }
                 Stmt::Print { expression } => {
                     let value = expression.evaluate(
-                        Rc::get_mut(&mut self.environment).expect(
-                            "Could not get mutable ref to env"
-                        )
+                        Rc::get_mut(&mut self.environment)
+                            .expect("Could not get mutable ref to env"),
                     )?;
-                    println!("{value:?}");
+                    println!("\"{}\"", value.to_string());
                 }
                 Stmt::Var { name, initializer } => {
                     let value = initializer.evaluate(
-                        Rc::get_mut(&mut self.environment).expect(
-                            "Could not get mutable ref to env"
-                        )
+                        Rc::get_mut(&mut self.environment)
+                            .expect("Could not get mutable ref to env"),
                     )?;
 
                     Rc::get_mut(&mut self.environment)
@@ -52,9 +50,25 @@ impl Interpreter {
 
                     block_result?;
                 }
-            }
+                Stmt::IfStmt {
+                    predicate,
+                    then,
+                    els,
+                } => {
+                    let truth_value = predicate.evaluate(
+                        Rc::get_mut(&mut self.environment)
+                            .expect("Could not get mutable ref to env"),
+                    )?;
+                    if truth_value.is_truthy() == LiteralValue::True {
+                        self.interpret(vec![*then])?;
+                    } else if let Some(els_stmt) = els {
+                        self.interpret(vec![*els_stmt])?;
+                    }
+                }
+            };
         }
 
         Ok(())
     }
 }
+

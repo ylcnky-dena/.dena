@@ -1,6 +1,6 @@
 use crate::environment::Environment;
 use crate::scanner;
-use crate::scanner::{ Token, TokenType };
+use crate::scanner::{Token, TokenType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
@@ -61,20 +61,54 @@ impl LiteralValue {
     }
 
     pub fn from_bool(b: bool) -> Self {
-        if b { True } else { False }
+        if b {
+            True
+        } else {
+            False
+        }
     }
 
     pub fn is_falsy(&self) -> LiteralValue {
         match self {
             Number(x) => {
-                if *x == (0.0 as f32) { True } else { False }
+                if *x == 0.0 as f32 {
+                    True
+                } else {
+                    False
+                }
             }
             StringValue(s) => {
-                if s.len() == 0 { True } else { False }
+                if s.len() == 0 {
+                    True
+                } else {
+                    False
+                }
             }
             True => False,
             False => True,
             Nil => True,
+        }
+    }
+
+    pub fn is_truthy(&self) -> LiteralValue {
+        match self {
+            Number(x) => {
+                if *x == 0.0 as f32 {
+                    False
+                } else {
+                    True
+                }
+            }
+            StringValue(s) => {
+                if s.len() == 0 {
+                    False
+                } else {
+                    True
+                }
+            }
+            True => True,
+            False => False,
+            Nil => False,
         }
     }
 }
@@ -109,8 +143,16 @@ impl Expr {
     pub fn to_string(&self) -> String {
         match self {
             Expr::Assign { name, value } => format!("({name:?} = {}", value.to_string()),
-            Expr::Binary { left, operator, right } =>
-                format!("({} {} {})", operator.lexeme, left.to_string(), right.to_string()),
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => format!(
+                "({} {} {})",
+                operator.lexeme,
+                left.to_string(),
+                right.to_string()
+            ),
             Expr::Grouping { expression } => format!("(group {})", (*expression).to_string()),
             Expr::Literal { value } => format!("{}", value.to_string()),
             Expr::Unary { operator, right } => {
@@ -133,11 +175,10 @@ impl Expr {
                     Err(format!("Variable {} has not been declared", name.lexeme))
                 }
             }
-            Expr::Variable { name } =>
-                match environment.get(&name.lexeme) {
-                    Some(value) => Ok(value.clone()),
-                    None => Err(format!("Variable '{}' has not been declared", name.lexeme)),
-                }
+            Expr::Variable { name } => match environment.get(&name.lexeme) {
+                Some(value) => Ok(value.clone()),
+                None => Err(format!("Variable '{}' has not been declared", name.lexeme)),
+            },
             Expr::Literal { value } => Ok((*value).clone()),
             Expr::Grouping { expression } => expression.evaluate(environment),
             Expr::Unary { operator, right } => {
@@ -152,7 +193,11 @@ impl Expr {
                     (_, ttype) => Err(format!("{} is not a valid unary operator", ttype)),
                 }
             }
-            Expr::Binary { left, operator, right } => {
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
                 let left = left.evaluate(environment)?;
                 let right = right.evaluate(environment)?;
 
@@ -197,10 +242,10 @@ impl Expr {
                     (StringValue(s1), TokenType::LessEqual, StringValue(s2)) => {
                         Ok(LiteralValue::from_bool(s1 <= s2))
                     }
-                    (x, ttype, y) =>
-                        Err(
-                            format!("{} is not implemented for operands {:?} and {:?}", ttype, x, y)
-                        ),
+                    (x, ttype, y) => Err(format!(
+                        "{} is not implemented for operands {:?} and {:?}",
+                        ttype, x, y
+                    )),
                 }
             }
         }
@@ -251,3 +296,4 @@ mod tests {
         assert_eq!(result, "(* (- 123) (group 45.67))");
     }
 }
+
