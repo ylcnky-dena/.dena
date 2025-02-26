@@ -10,25 +10,23 @@ pub struct Interpreter {
 }
 
 fn clock_impl(_args: &Vec<LiteralValue>) -> LiteralValue {
-    let now = std::time::SystemTime::now()
+    let now = std::time::SystemTime
+        ::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .expect("Could not get system time")
         .as_millis();
 
-    LiteralValue::Number(now as f64 / 1000.0)
+    LiteralValue::Number((now as f64) / 1000.0)
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         let mut globals = Environment::new();
-        globals.define(
-            "clock".to_string(),
-            LiteralValue::Callable {
-                name: "clock".to_string(),
-                arity: 0,
-                fun: Rc::new(clock_impl),
-            },
-        );
+        globals.define("clock".to_string(), LiteralValue::Callable {
+            name: "clock".to_string(),
+            arity: 0,
+            fun: Rc::new(clock_impl),
+        });
 
         Self {
             // globals,
@@ -50,26 +48,24 @@ impl Interpreter {
                 Stmt::Var { name, initializer } => {
                     let value = initializer.evaluate(self.environment.clone())?;
 
-                    self.environment
-                        .borrow_mut()
-                        .define(name.lexeme.clone(), value);
+                    self.environment.borrow_mut().define(name.lexeme.clone(), value);
                 }
                 Stmt::Block { statements } => {
                     let mut new_environment = Environment::new();
                     new_environment.enclosing = Some(self.environment.clone());
                     let old_environment = self.environment.clone();
                     self.environment = Rc::new(RefCell::new(new_environment));
-                    let block_result =
-                        self.interpret((*statements).iter().map(|b| b.as_ref()).collect());
+                    let block_result = self.interpret(
+                        (*statements)
+                            .iter()
+                            .map(|b| b.as_ref())
+                            .collect()
+                    );
                     self.environment = old_environment;
 
                     block_result?;
                 }
-                Stmt::IfStmt {
-                    predicate,
-                    then,
-                    els,
-                } => {
+                Stmt::IfStmt { predicate, then, els } => {
                     let truth_value = predicate.evaluate(self.environment.clone())?;
                     if truth_value.is_truthy() == LiteralValue::True {
                         let statements = vec![then.as_ref()];
@@ -87,10 +83,9 @@ impl Interpreter {
                         flag = condition.evaluate(self.environment.clone())?;
                     }
                 }
-            };
+            }
         }
 
         Ok(())
     }
 }
-

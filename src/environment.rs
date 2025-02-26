@@ -38,7 +38,7 @@ impl Environment {
                 self.values.insert(name.to_string(), value);
                 true
             }
-            (None, Some(env)) => (env.borrow_mut()).assign(name, value),
+            (None, Some(env)) => env.borrow_mut().assign(name, value),
             (None, None) => false,
         }
     }
@@ -52,4 +52,3 @@ mod tests {
         let _environment = Environment::new();
     }
 }
-

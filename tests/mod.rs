@@ -4,13 +4,13 @@ mod tests {
 
     #[test]
     fn interpret_block() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/block.jlox")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -22,13 +22,13 @@ mod tests {
 
     #[test]
     fn interpret_while() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/while.jlox")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -40,13 +40,13 @@ mod tests {
 
     #[test]
     fn interpret_while_math() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/while_math.jlox")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -66,13 +66,13 @@ mod tests {
 
     #[test]
     fn interpret_for_loop() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/forloop.jlox")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -94,4 +94,3 @@ mod tests {
         }
     }
 }
-
