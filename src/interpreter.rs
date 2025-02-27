@@ -6,33 +6,34 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    // globals: Environment,
+    specials: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
 }
 
 fn clock_impl(_env: Rc<RefCell<Environment>>, _args: &Vec<LiteralValue>) -> LiteralValue {
-    let now = std::time::SystemTime
-        ::now()
+    let now = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .expect("Could not get system time")
         .as_millis();
 
-    LiteralValue::Number((now as f64) / 1000.0)
+    LiteralValue::Number(now as f64 / 1000.0)
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut globals = Environment::new();
-        globals.define("clock".to_string(), LiteralValue::Callable {
-            name: "clock".to_string(),
-            arity: 0,
-            fun: Rc::new(clock_impl),
-        });
+        let mut env = Environment::new();
+        env.define(
+            "clock".to_string(),
+            LiteralValue::Callable {
+                name: "clock".to_string(),
+                arity: 0,
+                fun: Rc::new(clock_impl),
+            },
+        );
 
         Self {
-            // globals,
-            //environment: Rc::new(RefCell::new(Environment::new())),
-            environment: Rc::new(RefCell::new(globals)),
+            specials: Rc::new(RefCell::new(Environment::new())),
+            environment: Rc::new(RefCell::new(env)),
         }
     }
 
@@ -40,7 +41,10 @@ impl Interpreter {
         let environment = Rc::new(RefCell::new(Environment::new()));
         environment.borrow_mut().enclosing = Some(parent);
 
-        Self { environment }
+        Self {
+            specials: Rc::new(RefCell::new(Environment::new())),
+            environment,
+        }
     }
 
     pub fn interpret(&mut self, stmts: Vec<&Stmt>) -> Result<(), String> {
@@ -56,24 +60,26 @@ impl Interpreter {
                 Stmt::Var { name, initializer } => {
                     let value = initializer.evaluate(self.environment.clone())?;
 
-                    self.environment.borrow_mut().define(name.lexeme.clone(), value);
+                    self.environment
+                        .borrow_mut()
+                        .define(name.lexeme.clone(), value);
                 }
                 Stmt::Block { statements } => {
                     let mut new_environment = Environment::new();
                     new_environment.enclosing = Some(self.environment.clone());
                     let old_environment = self.environment.clone();
                     self.environment = Rc::new(RefCell::new(new_environment));
-                    let block_result = self.interpret(
-                        (*statements)
-                            .iter()
-                            .map(|b| b.as_ref())
-                            .collect()
-                    );
+                    let block_result =
+                        self.interpret((*statements).iter().map(|b| b.as_ref()).collect());
                     self.environment = old_environment;
 
                     block_result?;
                 }
-                Stmt::IfStmt { predicate, then, els } => {
+                Stmt::IfStmt {
+                    predicate,
+                    then,
+                    els,
+                } => {
                     let truth_value = predicate.evaluate(self.environment.clone())?;
                     if truth_value.is_truthy() == LiteralValue::True {
                         let statements = vec![then.as_ref()];
@@ -99,14 +105,8 @@ impl Interpreter {
                     // Add those bindings to the environment used to execute body
                     // Then execute body
 
-                    let params: Vec<Token> = params
-                        .iter()
-                        .map(|t| (*t).clone())
-                        .collect();
-                    let body: Vec<Box<Stmt>> = body
-                        .iter()
-                        .map(|b| (*b).clone())
-                        .collect();
+                    let params: Vec<Token> = params.iter().map(|t| (*t).clone()).collect();
+                    let body: Vec<Box<Stmt>> = body.iter().map(|b| (*b).clone()).collect();
                     let name_clone = name.lexeme.clone();
                     // TODO Make a struct that contains data for evaluation
                     // and which implements Fn
@@ -114,26 +114,23 @@ impl Interpreter {
                         let mut clos_int = Interpreter::for_closure(parent_env);
 
                         for (i, arg) in args.iter().enumerate() {
-                            clos_int.environment
+                            clos_int
+                                .environment
                                 .borrow_mut()
                                 .define(params[i].lexeme.clone(), (*arg).clone());
                         }
 
-                        for i in 0..body.len() - 1 {
+                        for i in 0..(body.len()) {
                             clos_int
                                 .interpret(vec![body[i].as_ref()])
                                 .expect(&format!("Evaluating failed inside {}", name_clone));
-                        }
 
-                        let value;
-                        match body[body.len() - 1].as_ref() {
-                            Stmt::Expression { expression } => {
-                                value = expression.evaluate(clos_int.environment.clone()).unwrap();
+                            if let Some(value) = clos_int.specials.borrow().get("return") {
+                                return value;
                             }
-                            _ => todo!("Didnt get an expression"),
                         }
 
-                        value
+                        LiteralValue::Nil
                     };
 
                     let callable = LiteralValue::Callable {
@@ -142,11 +139,25 @@ impl Interpreter {
                         fun: Rc::new(fun_impl),
                     };
 
-                    self.environment.borrow_mut().define(name.lexeme.clone(), callable);
+                    self.environment
+                        .borrow_mut()
+                        .define(name.lexeme.clone(), callable);
                 }
-            }
+                Stmt::ReturnStmt { keyword: _, value } => {
+                    let eval_val;
+                    if let Some(value) = value {
+                        eval_val = value.evaluate(self.environment.clone())?;
+                    } else {
+                        eval_val = LiteralValue::Nil;
+                    }
+                    self.specials
+                        .borrow_mut()
+                        .define_top_level("return".to_string(), eval_val);
+                }
+            };
         }
 
         Ok(())
     }
 }
+

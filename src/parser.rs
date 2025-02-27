@@ -1,5 +1,5 @@
-use crate::expr::{ Expr, Expr::*, LiteralValue };
-use crate::scanner::{ Token, TokenType, TokenType::* };
+use crate::expr::{Expr, Expr::*, LiteralValue};
+use crate::scanner::{Token, TokenType, TokenType::*};
 use crate::stmt::Stmt;
 
 pub struct Parser {
@@ -62,7 +62,9 @@ impl Parser {
             loop {
                 if parameters.len() >= 255 {
                     let location = self.peek().line_number;
-                    return Err(format!("Line {location}: Cant have more than 255 arguments"));
+                    return Err(format!(
+                        "Line {location}: Cant have more than 255 arguments"
+                    ));
                 }
 
                 let param = self.consume(Identifier, "Expected parameter name")?;
@@ -119,9 +121,25 @@ impl Parser {
             self.while_statement()
         } else if self.match_token(For) {
             self.for_statement()
+        } else if self.match_token(Return) {
+            self.return_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, String> {
+        let keyword = self.previous();
+        let value;
+        if !self.check(Semicolon) {
+            // NOT return;
+            value = Some(self.expression()?);
+        } else {
+            value = None;
+        }
+        self.consume(Semicolon, "Expected ';' after return value;")?;
+
+        Ok(Stmt::ReturnStmt { keyword, value })
     }
 
     fn for_statement(&mut self) -> Result<Stmt, String> {
@@ -164,7 +182,10 @@ impl Parser {
 
         if let Some(incr) = increment {
             body = Stmt::Block {
-                statements: vec![Box::new(body), Box::new(Stmt::Expression { expression: incr })],
+                statements: vec![
+                    Box::new(body),
+                    Box::new(Stmt::Expression { expression: incr }),
+                ],
             };
         }
 
@@ -173,11 +194,9 @@ impl Parser {
             None => {
                 cond = Expr::Literal {
                     value: LiteralValue::True,
-                };
+                }
             }
-            Some(c) => {
-                cond = c;
-            }
+            Some(c) => cond = c,
         }
         body = Stmt::WhileStmt {
             condition: cond,
@@ -260,11 +279,10 @@ impl Parser {
             let value = self.assignment()?;
 
             match expr {
-                Variable { name } =>
-                    Ok(Assign {
-                        name,
-                        value: Box::from(value),
-                    }),
+                Variable { name } => Ok(Assign {
+                    name,
+                    value: Box::from(value),
+                }),
                 _ => Err("Invalid assignment target.".to_string()),
             }
         } else {
@@ -403,7 +421,9 @@ impl Parser {
                 arguments.push(arg);
                 if arguments.len() >= 255 {
                     let location = self.peek().line_number;
-                    return Err(format!("Line {location}: Cant have more than 255 arguments"));
+                    return Err(format!(
+                        "Line {location}: Cant have more than 255 arguments"
+                    ));
                 }
 
                 if !self.match_token(Comma) {
@@ -436,7 +456,7 @@ impl Parser {
                 self.advance();
                 result = Literal {
                     value: LiteralValue::from_token(token),
-                };
+                }
             }
             Identifier => {
                 self.advance();
@@ -444,9 +464,7 @@ impl Parser {
                     name: self.previous(),
                 };
             }
-            _ => {
-                return Err("Expected expression".to_string());
-            }
+            _ => return Err("Expected expression".to_string()),
         }
 
         Ok(result)
@@ -519,9 +537,7 @@ impl Parser {
             }
 
             match self.peek().token_type {
-                Class | Fun | Var | For | If | While | Print | Return => {
-                    return;
-                }
+                Class | Fun | Var | For | If | While | Print | Return => return,
                 _ => (),
             }
 
@@ -533,7 +549,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanner::{ LiteralValue::*, Scanner };
+    use crate::scanner::{LiteralValue::*, Scanner};
 
     #[test]
     fn test_addition() {
