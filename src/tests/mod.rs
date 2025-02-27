@@ -6,7 +6,7 @@ mod tests {
     fn interpret_block() {
         let output = Command::new("cargo")
             .arg("run")
-            .arg("./src/tests/cases/block.jlox")
+            .arg("./src/tests/cases/block.dena")
             .output()
             .unwrap();
         let lines = std::str
@@ -24,7 +24,7 @@ mod tests {
     fn interpret_while() {
         let output = Command::new("cargo")
             .arg("run")
-            .arg("./src/tests/cases/while.jlox")
+            .arg("./src/tests/cases/while.dena")
             .output()
             .unwrap();
         let lines = std::str
@@ -42,7 +42,7 @@ mod tests {
     fn interpret_while_math() {
         let output = Command::new("cargo")
             .arg("run")
-            .arg("./src/tests/cases/while_math.jlox")
+            .arg("./src/tests/cases/while_math.dena")
             .output()
             .unwrap();
         let lines = std::str
@@ -68,7 +68,7 @@ mod tests {
     fn interpret_for_loop() {
         let output = Command::new("cargo")
             .arg("run")
-            .arg("./src/tests/cases/forloop.jlox")
+            .arg("./src/tests/cases/forloop.dena")
             .output()
             .unwrap();
         let lines = std::str
