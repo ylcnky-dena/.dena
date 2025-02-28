@@ -7,13 +7,13 @@ It is obvious that this development does not cover all the features and function
 # Features
 * It is a dynamically typed language (`Python` lovers welcome ✅). Code runs with an interpreter.
 * Memory management with a garbage collector.
-### **Data Types**: 
+### **✅ Data Types**: 
 * It is a bit generic language. So not so many data types are supported except the followings:
     * `Booleans`
     * `Numbers`
     * `Strings`
     * `Nil` (or `null` in Java or C)
-### **Expressions**: Following expressions are supported:
+### **✅ Expressions**: Following expressions are supported:
 * **Arithmetic**: simple math operands (`+`, `-`, `*`, `/`)
 * **Comparison** and **Equality**: operators which return a `bool` which we can compare numbers (`<`, `>`, `=<`, `>=`, `==`)
 * **Logical Operators**: to define `true` or `false` booleans. `!` returns `false` if its operand is `true`
@@ -24,10 +24,10 @@ It is obvious that this development does not cover all the features and function
         * `false` or `false` --> `false`
         * `true` or `false` --> `true`
 * **Precedence and Grouping**: All of the above operators have the same precedence. You can use `()` to group the stuff. `var agerage = (min + max) / 2;`
-### **Statements**:
+### **✅ Statements**:
 * Where an expression's main job is to produce *value*, a statement's job is to produce an *effect*. Statements do not evaluate to a value. An expression followed by a semicolon `;` promotes the expression to statement-hood. This is called an expression statement.
 
-### **Variables**:
+### **✅ Variables**:
 Variables are declared with `var` statements. If you forget the initializer, the variables value defaults to `nil`
 
 Once declared, you can access and assign a variable by using its name.
@@ -38,7 +38,7 @@ breakfast = "beignets";
 print breakfast; // "beignets".
 ```
 
-### **Control Flows**:
+### **✅ Control Flows**:
 An `if` statement executes one of two statements based on some condition.
 ```js
 if (condition) {
@@ -63,7 +63,7 @@ for (var a = 1; a < 10; a = a + 1) {
 ```
 This loop does the same thing as the previous `while` loop. Most modern languages also have some sort of `for-in` or `foreach` loop for explicitly iterating over various sequence types. In a real language, that’s nicer than the crude C-style `for` loop we got here. `.dena` keeps it basic.
 
-### **Functions**:
+### **✅ Functions**:
 A function call expression looks the same as it does in C.
 ```js
 makeBreakfast(bacon, eggs, toast);
@@ -88,8 +88,12 @@ fun returnSum(a, b) {
 ```
 If execution reaches the end of the block without hitting a `return`, it implicitly returns `nil`.
 
-### **Closures**:
+### [ ] **Closures**:
 TBC...
+
+### [ ] **Classes**:
+
+### [ ] **Inheritance**:
 
 ## How to build?
 Since the background of this code is based on Rust, you can use the `cargo`.

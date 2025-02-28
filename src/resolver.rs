@@ -241,4 +241,3 @@ impl Resolver {
         Ok(())
     }
 }
-
