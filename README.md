@@ -96,7 +96,7 @@ Since the background of this code is based on Rust, you can use the `cargo`.
 
 If you want to run without building, simply run `cargo r`. This will start the interpreter of the language.
 
-If you want to run the code in `.dena` files, you can try the test files in [`/test`](https://github.com/ylcnky/.dena/tree/master/test) via `cargo r -- test/file_name.dena`
+If you want to run the code in `.dena` files, you can try the test files in [`/test`](https://github.com/ylcnky/.dena/tree/master/src/test) via `cargo r -- test/file_name.dena`
 
 If you want to run the language as part of your runtime (`CMD`, `Terminal`), then simply build the language from source via `cargo b` and move the pre-build binary in `target/debug/` directory to your `ENV` variables. Then you can start the intepreter with `dena` command.
 
