@@ -12,7 +12,6 @@ pub struct FunctionVal {
     parent_environment: Rc<RefCell<Environment>>,
 }
 
-
 impl FnOnce<(Vec<LiteralValue>,)> for FunctionVal {
     type Output = LiteralValue;
     extern "rust-call" fn call_once(self, _args: (Vec<LiteralValue>,)) -> Self::Output {
@@ -27,11 +26,9 @@ impl FnMut<(Vec<LiteralValue>,)> for FunctionVal {
     }
 }
 
-
 impl Fn<(Vec<LiteralValue>,)> for FunctionVal {
     // type Output = LiteralValue;
     extern "rust-call" fn call(&self, _args: (Vec<LiteralValue>,)) -> Self::Output {
         todo!();
     }
 }
-

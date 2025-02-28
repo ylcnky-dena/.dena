@@ -4,13 +4,13 @@ mod tests {
 
     #[test]
     fn interpret_block() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/block.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -22,13 +22,13 @@ mod tests {
 
     #[test]
     fn interpret_while() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/while.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -40,13 +40,13 @@ mod tests {
 
     #[test]
     fn interpret_while_math() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/while_math.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -66,13 +66,13 @@ mod tests {
 
     #[test]
     fn interpret_for_loop() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/forloop.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -96,13 +96,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_def() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/fundef.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -115,13 +115,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_mod_env() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/fun_mods_local_env.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -132,13 +132,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_return() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/funreturn.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -149,13 +149,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_returnnil() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/funreturnnil.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -168,13 +168,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_condreturn() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/funcondreturn.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -188,13 +188,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_nested() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/funverynested.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -206,13 +206,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_closure() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/funclosure.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();
@@ -226,13 +226,13 @@ mod tests {
 
     #[test]
     fn interpret_fun_anon() {
-        let output =
-            Command::new("cargo")
+        let output = Command::new("cargo")
             .arg("run")
             .arg("./src/tests/cases/funanon.dena")
             .output()
             .unwrap();
-        let lines = std::str::from_utf8(output.stdout.as_slice())
+        let lines = std::str
+            ::from_utf8(output.stdout.as_slice())
             .unwrap()
             .split("\n")
             .collect::<Vec<&str>>();

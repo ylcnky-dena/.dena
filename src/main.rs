@@ -4,6 +4,7 @@ mod parser;
 mod scanner;
 mod stmt;
 mod environment;
+mod resolver;
 mod tests;
 use crate::interpreter::*;
 use crate::parser::*;
@@ -11,17 +12,18 @@ use crate::scanner::*;
 
 use std::env;
 use std::fs;
-use std::io::{self, BufRead, Write};
+use std::io::{ self, BufRead, Write };
 use std::process::exit;
-
-
-
 
 pub fn run_file(path: &str) -> Result<(), String> {
     let mut interpreter = Interpreter::new();
     match fs::read_to_string(path) {
-        Err(msg) => return Err(msg.to_string()),
-        Ok(contents) => return run(&mut interpreter, &contents),
+        Err(msg) => {
+            return Err(msg.to_string());
+        }
+        Ok(contents) => {
+            return run(&mut interpreter, &contents);
+        }
     }
 }
 
@@ -41,7 +43,9 @@ fn run_prompt() -> Result<(), String> {
         print!("> ");
         match io::stdout().flush() {
             Ok(_) => (),
-            Err(_) => return Err("Could not flush stdout".to_string()),
+            Err(_) => {
+                return Err("Could not flush stdout".to_string());
+            }
         }
 
         let mut buffer = String::new();
@@ -53,7 +57,9 @@ fn run_prompt() -> Result<(), String> {
                     return Ok(());
                 }
             }
-            Err(_) => return Err("Couldnt read line".to_string()),
+            Err(_) => {
+                return Err("Couldnt read line".to_string());
+            }
         }
 
         println!("ECHO: {}", buffer);
@@ -68,7 +74,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 2 {
-        println!("Usage: dena [script]");
+        println!("Usage: jlox [script]");
         exit(64);
     } else if args.len() == 2 {
         match run_file(&args[1]) {
