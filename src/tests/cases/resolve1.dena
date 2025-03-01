@@ -1,14 +1,10 @@
 // --- Test
-var a = 2;
-
+var a = 1;
 fun mod() {
-  a = 3;
+  a = 2;
 }
-
 mod();
-
 print a;
 
-
 // --- Expected
-// 3
+// 2
