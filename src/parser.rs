@@ -1,10 +1,11 @@
-use crate::expr::{ Expr, Expr::*, LiteralValue };
-use crate::scanner::{ Token, TokenType, TokenType::* };
+use crate::expr::{Expr, Expr::*, LiteralValue};
+use crate::scanner::{Token, TokenType, TokenType::*};
 use crate::stmt::Stmt;
 
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    next_id: usize,
 }
 
 #[derive(Debug)]
@@ -17,7 +18,15 @@ impl Parser {
         Self {
             tokens: tokens,
             current: 0,
+            next_id: 0,
         }
+    }
+
+    fn get_id(&mut self) -> usize {
+        let id = self.next_id;
+        self.next_id += 1;
+        
+        id
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
@@ -62,7 +71,9 @@ impl Parser {
             loop {
                 if parameters.len() >= 255 {
                     let location = self.peek().line_number;
-                    return Err(format!("Line {location}: Cant have more than 255 arguments"));
+                    return Err(format!(
+                        "Line {location}: Cant have more than 255 arguments"
+                    ));
                 }
 
                 let param = self.consume(Identifier, "Expected parameter name")?;
@@ -96,6 +107,7 @@ impl Parser {
             initializer = self.expression()?;
         } else {
             initializer = Literal {
+                id: self.get_id(),
                 value: LiteralValue::Nil,
             };
         }
@@ -180,7 +192,10 @@ impl Parser {
 
         if let Some(incr) = increment {
             body = Stmt::Block {
-                statements: vec![Box::new(body), Box::new(Stmt::Expression { expression: incr })],
+                statements: vec![
+                    Box::new(body),
+                    Box::new(Stmt::Expression { expression: incr }),
+                ],
             };
         }
 
@@ -188,12 +203,11 @@ impl Parser {
         match condition {
             None => {
                 cond = Expr::Literal {
+                    id: self.get_id(),
                     value: LiteralValue::True,
-                };
+                }
             }
-            Some(c) => {
-                cond = c;
-            }
+            Some(c) => cond = c,
         }
         body = Stmt::WhileStmt {
             condition: cond,
@@ -269,23 +283,91 @@ impl Parser {
         self.assignment()
     }
 
+    fn function_expression(&mut self) -> Result<Expr, String> {
+        let paren = self.consume(LeftParen, "Expected '(' after anonymous function")?;
+        let mut parameters = vec![];
+        if !self.check(RightParen) {
+            loop {
+                if parameters.len() >= 255 {
+                    let location = self.peek().line_number;
+                    return Err(format!(
+                        "Line {location}: Cant have more than 255 arguments"
+                    ));
+                }
+
+                let param = self.consume(Identifier, "Expected parameter name")?;
+                parameters.push(param);
+
+                if !self.match_token(Comma) {
+                    break;
+                }
+            }
+        }
+        self.consume(
+            RightParen,
+            "Expected ')' after anonymous function parameters",
+        )?;
+
+        self.consume(
+            LeftBrace,
+            "Expected '{' after anonymous function declaration",
+        )?;
+
+        let body = match self.block_statement()? {
+            Stmt::Block { statements } => statements,
+            _ => panic!("Block statement parsed something that was not a block"),
+        };
+
+        Ok(Expr::AnonFunction {
+            id: self.get_id(),
+            paren,
+            arguments: parameters,
+            body,
+        })
+    }
+
     fn assignment(&mut self) -> Result<Expr, String> {
-        let expr = self.or()?;
+        // a = 2; NOT var a = 2;
+        let expr = self.pipe()?;
 
         if self.match_token(Equal) {
-            let value = self.assignment()?;
+            let value = self.expression()?;
 
             match expr {
-                Variable { name } =>
-                    Ok(Assign {
-                        name,
-                        value: Box::from(value),
-                    }),
+                Variable { id: _, name } => Ok(Assign {
+                    id: self.get_id(),
+                    name,
+                    value: Box::from(value),
+                }),
                 _ => Err("Invalid assignment target.".to_string()),
             }
         } else {
             Ok(expr)
         }
+    }
+
+    fn pipe(&mut self) -> Result<Expr, String> {
+        // expr |> f
+        // expr |> f1 |> f2
+        // expr |> (f1 |> f2)
+        // expr |> (f1 |> (f2 |> f3))
+        // (expr |> f1) |> f2
+        
+        // expr |> fun (a) { return a + 1; }
+        // expr |> a -> a + 1
+        let mut expr = self.or()?;
+        while self.match_token(Pipe) {
+            let pipe = self.previous();
+            let function = self.or()?;
+
+            expr = Call {
+                id: self.get_id(),
+                callee: Box::new(function),
+                paren: pipe,
+                arguments: vec![expr]};
+
+        }
+        Ok(expr)
     }
 
     fn or(&mut self) -> Result<Expr, String> {
@@ -296,6 +378,7 @@ impl Parser {
             let right = self.and()?;
 
             expr = Logical {
+                id: self.get_id(),
                 left: Box::new(expr),
                 operator: operator,
                 right: Box::new(right),
@@ -312,6 +395,7 @@ impl Parser {
             let operator = self.previous();
             let right = self.equality()?;
             expr = Logical {
+                id: self.get_id(),
                 left: Box::new(expr),
                 operator: operator,
                 right: Box::new(right),
@@ -327,6 +411,7 @@ impl Parser {
             let operator = self.previous();
             let rhs = self.comparison()?;
             expr = Binary {
+                id: self.get_id(),
                 left: Box::from(expr),
                 operator: operator,
                 right: Box::from(rhs),
@@ -343,6 +428,7 @@ impl Parser {
             let op = self.previous();
             let rhs = self.term()?;
             expr = Binary {
+                id: self.get_id(),
                 left: Box::from(expr),
                 operator: op,
                 right: Box::from(rhs),
@@ -359,6 +445,7 @@ impl Parser {
             let op = self.previous();
             let rhs = self.factor()?;
             expr = Binary {
+                id: self.get_id(),
                 left: Box::from(expr),
                 operator: op,
                 right: Box::from(rhs),
@@ -374,6 +461,7 @@ impl Parser {
             let op = self.previous();
             let rhs = self.unary()?;
             expr = Binary {
+                id: self.get_id(),
                 left: Box::from(expr),
                 operator: op,
                 right: Box::from(rhs),
@@ -388,6 +476,7 @@ impl Parser {
             let op = self.previous();
             let rhs = self.unary()?;
             Ok(Unary {
+                id: self.get_id(),
                 operator: op,
                 right: Box::from(rhs),
             })
@@ -419,7 +508,9 @@ impl Parser {
                 arguments.push(arg);
                 if arguments.len() >= 255 {
                     let location = self.peek().line_number;
-                    return Err(format!("Line {location}: Cant have more than 255 arguments"));
+                    return Err(format!(
+                        "Line {location}: Cant have more than 255 arguments"
+                    ));
                 }
 
                 if !self.match_token(Comma) {
@@ -430,6 +521,7 @@ impl Parser {
         let paren = self.consume(RightParen, "Expected ')' after arguments.")?;
 
         Ok(Call {
+            id: self.get_id(),
             callee: Box::new(callee),
             paren,
             arguments,
@@ -445,24 +537,29 @@ impl Parser {
                 let expr = self.expression()?;
                 self.consume(RightParen, "Expected ')'")?;
                 result = Grouping {
+                    id: self.get_id(),
                     expression: Box::from(expr),
                 };
             }
             False | True | Nil | Number | StringLit => {
                 self.advance();
                 result = Literal {
+                    id: self.get_id(),
                     value: LiteralValue::from_token(token),
-                };
+                }
             }
             Identifier => {
                 self.advance();
                 result = Variable {
+                    id: self.get_id(),
                     name: self.previous(),
                 };
-            }
-            _ => {
-                return Err("Expected expression".to_string());
-            }
+            },
+            Fun => {
+                self.advance();
+                result = self.function_expression()?;
+            },
+            _ => return Err("Expected expression".to_string()),
         }
 
         Ok(result)
@@ -475,7 +572,7 @@ impl Parser {
             let token = self.previous();
             Ok(token)
         } else {
-            Err(msg.to_string())
+            Err(format!("Line {}: {}", token.line_number, msg))
         }
     }
 
@@ -535,9 +632,7 @@ impl Parser {
             }
 
             match self.peek().token_type {
-                Class | Fun | Var | For | If | While | Print | Return => {
-                    return;
-                }
+                Class | Fun | Var | For | If | While | Print | Return => return,
                 _ => (),
             }
 
@@ -549,7 +644,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanner::{ LiteralValue::*, Scanner };
+    use crate::scanner::{LiteralValue::*, Scanner};
 
     #[test]
     fn test_addition() {

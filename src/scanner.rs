@@ -2,14 +2,12 @@ use std::collections::HashMap;
 use std::string::String;
 
 fn is_digit(ch: char) -> bool {
-    (ch as u8) >= ('0' as u8) && (ch as u8) <= ('9' as u8)
+    ch as u8 >= '0' as u8 && ch as u8 <= '9' as u8
 }
 
 fn is_alpha(ch: char) -> bool {
     let uch = ch as u8;
-    (uch >= ('a' as u8) && uch <= ('z' as u8)) ||
-        (uch >= ('A' as u8) && uch <= ('Z' as u8)) ||
-        ch == '_'
+    (uch >= 'a' as u8 && uch <= 'z' as u8) || (uch >= 'A' as u8 && uch <= 'Z' as u8) || (ch == '_')
 }
 
 fn is_alpha_numeric(ch: char) -> bool {
@@ -118,17 +116,29 @@ impl Scanner {
                 self.add_token(token);
             }
             '=' => {
-                let token = if self.char_match('=') { EqualEqual } else { Equal };
+                let token = if self.char_match('=') {
+                    EqualEqual
+                } else {
+                    Equal
+                };
 
                 self.add_token(token);
             }
             '<' => {
-                let token = if self.char_match('=') { LessEqual } else { Less };
+                let token = if self.char_match('=') {
+                    LessEqual
+                } else {
+                    Less
+                };
 
                 self.add_token(token);
             }
             '>' => {
-                let token = if self.char_match('=') { GreaterEqual } else { Greater };
+                let token = if self.char_match('=') {
+                    GreaterEqual
+                } else {
+                    Greater
+                };
 
                 self.add_token(token);
             }
@@ -143,11 +153,16 @@ impl Scanner {
                 } else {
                     self.add_token(Slash);
                 }
-            }
+            },
+            '|' => {
+                if self.char_match('>') {
+                    self.add_token(Pipe);
+                } else {
+                    return Err(format!("Expected '>' at line {}", self.line));
+                }
+            },
             ' ' | '\r' | '\t' => {}
-            '\n' => {
-                self.line += 1;
-            }
+            '\n' => self.line += 1,
             '"' => self.string()?,
 
             c => {
@@ -193,9 +208,7 @@ impl Scanner {
         let value = substring.parse::<f64>();
         match value {
             Ok(value) => self.add_token_lit(Number, Some(FValue(value))),
-            Err(_) => {
-                return Err(format!("Could not parse number: {}", substring));
-            }
+            Err(_) => return Err(format!("Could not parse number: {}", substring)),
         }
 
         Ok(())
@@ -206,10 +219,7 @@ impl Scanner {
             return '\0';
         }
 
-        self.source
-            .chars()
-            .nth(self.current + 1)
-            .unwrap()
+        self.source.chars().nth(self.current + 1).unwrap()
     }
 
     fn string(self: &mut Self) -> Result<(), String> {
@@ -299,6 +309,7 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
+    Pipe, // |>
 
     // Literals
     Identifier,
@@ -487,3 +498,4 @@ mod tests {
         assert_eq!(scanner.tokens[12].token_type, Eof);
     }
 }
+
