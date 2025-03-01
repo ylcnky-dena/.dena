@@ -111,8 +111,7 @@ fn main() {
             }
         }
     } else {
-        println!("Usage: jlox [script]");
+        println!("Usage: dena [script]");
         exit(64);
     }
 }
-

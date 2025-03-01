@@ -1,10 +1,11 @@
 use crate::environment::Environment;
 use crate::interpreter::Interpreter;
 use crate::scanner;
-use crate::scanner::{Token, TokenType};
+use crate::scanner::{ Token, TokenType };
 use std::cell::RefCell;
-use std::cmp::{Eq, PartialEq};
-use std::hash::{Hash, Hasher};
+use std::cmp::{ Eq, PartialEq };
+use std::collections::HashMap;
+use std::hash::{ Hash, Hasher };
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -32,18 +33,8 @@ impl PartialEq for LiteralValue {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Number(x), Number(y)) => x == y,
-            (
-                Callable {
-                    name,
-                    arity,
-                    fun: _,
-                },
-                Callable {
-                    name: name2,
-                    arity: arity2,
-                    fun: _,
-                },
-            ) => name == name2 && arity == arity2,
+            (Callable { name, arity, fun: _ }, Callable { name: name2, arity: arity2, fun: _ }) =>
+                name == name2 && arity == arity2,
             (StringValue(x), StringValue(y)) => x == y,
             (True, True) => true,
             (False, False) => true,
@@ -75,11 +66,7 @@ impl LiteralValue {
             LiteralValue::True => "true".to_string(),
             LiteralValue::False => "false".to_string(),
             LiteralValue::Nil => "nil".to_string(),
-            LiteralValue::Callable {
-                name,
-                arity,
-                fun: _,
-            } => format!("{name}/{arity}"),
+            LiteralValue::Callable { name, arity, fun: _ } => format!("{name}/{arity}"),
         }
     }
 
@@ -90,11 +77,7 @@ impl LiteralValue {
             LiteralValue::True => "Boolean",
             LiteralValue::False => "Boolean",
             LiteralValue::Nil => "nil",
-            LiteralValue::Callable {
-                name: _,
-                arity: _,
-                fun: _,
-            } => "Callable",
+            LiteralValue::Callable { name: _, arity: _, fun: _ } => "Callable",
         }
     }
 
@@ -110,64 +93,38 @@ impl LiteralValue {
     }
 
     pub fn from_bool(b: bool) -> Self {
-        if b {
-            True
-        } else {
-            False
-        }
+        if b { True } else { False }
     }
 
     pub fn is_falsy(&self) -> LiteralValue {
         match self {
             Number(x) => {
-                if *x == 0.0 as f64 {
-                    True
-                } else {
-                    False
-                }
+                if *x == (0.0 as f64) { True } else { False }
             }
             StringValue(s) => {
-                if s.len() == 0 {
-                    True
-                } else {
-                    False
-                }
+                if s.len() == 0 { True } else { False }
             }
             True => False,
             False => True,
             Nil => True,
-            Callable {
-                name: _,
-                arity: _,
-                fun: _,
-            } => panic!("Cannot use Callable as a falsy value"),
+            Callable { name: _, arity: _, fun: _ } =>
+                panic!("Cannot use Callable as a falsy value"),
         }
     }
 
     pub fn is_truthy(&self) -> LiteralValue {
         match self {
             Number(x) => {
-                if *x == 0.0 as f64 {
-                    False
-                } else {
-                    True
-                }
+                if *x == (0.0 as f64) { False } else { True }
             }
             StringValue(s) => {
-                if s.len() == 0 {
-                    False
-                } else {
-                    True
-                }
+                if s.len() == 0 { False } else { True }
             }
             True => True,
             False => False,
             Nil => False,
-            Callable {
-                name: _,
-                arity: _,
-                fun: _,
-            } => panic!("Can not use callable as a truthy value"),
+            Callable { name: _, arity: _, fun: _ } =>
+                panic!("Can not use callable as a truthy value"),
         }
     }
 }
@@ -194,7 +151,8 @@ pub enum Expr {
         right: Box<Expr>,
     },
     // 2 + 2 |> f
-    Call { // x |> f -> Call { id, f, paren (pipe), arguments: [x]}
+    Call {
+        // x |> f -> Call { id, f, paren (pipe), arguments: [x]}
         id: usize,
         callee: Box<Expr>,
         paren: Token,
@@ -247,97 +205,41 @@ impl PartialEq for Expr {
 
 impl Eq for Expr {}
 
-
 impl Expr {
     pub fn get_id(&self) -> usize {
         match self {
-            Expr::AnonFunction {
-                id,
-                paren: _,
-                arguments: _,
-                body: _,
-            } => *id,
+            Expr::AnonFunction { id, paren: _, arguments: _, body: _ } => *id,
             Expr::Assign { id, name: _, value: _ } => *id,
-            Expr::Binary {
-                id,
-                left: _,
-                operator: _,
-                right: _,
-            } => *id,
-            
-            Expr::Call {
-                id,
-                callee: _,
-                paren: _,
-                arguments: _,
-            } => *id,
-            Expr::Grouping { id, expression: _, } => *id,
+            Expr::Binary { id, left: _, operator: _, right: _ } => *id,
+
+            Expr::Call { id, callee: _, paren: _, arguments: _ } => *id,
+            Expr::Grouping { id, expression: _ } => *id,
             Expr::Literal { id, value: _ } => *id,
-            Expr::Logical {
-                id,
-                left: _,
-                operator: _,
-                right: _,
-            } => *id,
-            Expr::Unary {
-                id,
-                operator: _,
-                right: _,
-            } => *id,
+            Expr::Logical { id, left: _, operator: _, right: _ } => *id,
+            Expr::Unary { id, operator: _, right: _ } => *id,
             Expr::Variable { id, name: _ } => *id,
         }
     }
-
 }
 
 impl Expr {
     #[allow(dead_code)]
     pub fn to_string(&self) -> String {
         match self {
-            Expr::AnonFunction {
-                id: _,
-                paren: _,
-                arguments,
-                body: _,
-            } => format!("anon/{}", arguments.len()),
+            Expr::AnonFunction { id: _, paren: _, arguments, body: _ } =>
+                format!("anon/{}", arguments.len()),
             Expr::Assign { id: _, name, value } => format!("({name:?} = {}", value.to_string()),
-            Expr::Binary {
-                id: _,
-                left,
-                operator,
-                right,
-            } => format!(
-                "({} {} {})",
-                operator.lexeme,
-                left.to_string(),
-                right.to_string()
-            ),
-            Expr::Call {
-                id: _,
-                callee,
-                paren: _,
-                arguments,
-            } => format!("({} {:?})", (*callee).to_string(), arguments),
+            Expr::Binary { id: _, left, operator, right } =>
+                format!("({} {} {})", operator.lexeme, left.to_string(), right.to_string()),
+            Expr::Call { id: _, callee, paren: _, arguments } =>
+                format!("({} {:?})", (*callee).to_string(), arguments),
             Expr::Grouping { id: _, expression } => {
                 format!("(group {})", (*expression).to_string())
             }
             Expr::Literal { id: _, value } => format!("{}", value.to_string()),
-            Expr::Logical {
-                id: _,
-                left,
-                operator,
-                right,
-            } => format!(
-                "({} {} {})",
-                operator.to_string(),
-                left.to_string(),
-                right.to_string()
-            ),
-            Expr::Unary {
-                id: _,
-                operator,
-                right,
-            } => {
+            Expr::Logical { id: _, left, operator, right } =>
+                format!("({} {} {})", operator.to_string(), left.to_string(), right.to_string()),
+            Expr::Unary { id: _, operator, right } => {
                 let operator_str = operator.lexeme.clone();
                 let right_str = (*right).to_string();
                 format!("({} {})", operator_str, right_str)
@@ -349,36 +251,41 @@ impl Expr {
     pub fn evaluate(
         &self,
         environment: Rc<RefCell<Environment>>,
-        distance: Option<usize>,
+        locals: Rc<RefCell<HashMap<usize, usize>>>
     ) -> Result<LiteralValue, String> {
         match self {
-            Expr::AnonFunction {
-                id: _,
-                paren,
-                arguments,
-                body,
-            } => {
+            Expr::AnonFunction { id: _, paren, arguments, body } => {
                 // We have to clone everything so the borrow checker doesnt get scared about us taking ownership of the values in the Expr
                 let arity = arguments.len();
                 let env = environment.clone();
-                let arguments: Vec<Token> = arguments.iter().map(|t| (*t).clone()).collect();
-                let body: Vec<Box<Stmt>> = body.iter().map(|b| (*b).clone()).collect();
+                let locals = locals.clone();
+                let arguments: Vec<Token> = arguments
+                    .iter()
+                    .map(|t| (*t).clone())
+                    .collect();
+                let body: Vec<Box<Stmt>> = body
+                    .iter()
+                    .map(|b| (*b).clone())
+                    .collect();
                 let paren = paren.clone();
 
                 let fun_impl = move |args: &Vec<LiteralValue>| {
-                    let mut anon_int = Interpreter::for_anon(env.clone());
+                    let mut anon_int = Interpreter::for_anon(env.clone(), locals.clone());
                     for (i, arg) in args.iter().enumerate() {
-                        anon_int
-                            .environment
+                        anon_int.environment
                             .borrow_mut()
                             .define(arguments[i].lexeme.clone(), (*arg).clone());
                     }
 
-                    for i in 0..(body.len()) {
-                        anon_int.interpret(vec![&body[i]]).expect(&format!(
-                            "Evaluating failed inside anon function at line {}",
-                            paren.line_number
-                        ));
+                    for i in 0..body.len() {
+                        anon_int
+                            .interpret(vec![&body[i]])
+                            .expect(
+                                &format!(
+                                    "Evaluating failed inside anon function at line {}",
+                                    paren.line_number
+                                )
+                            );
 
                         if let Some(value) = anon_int.specials.borrow().get("return") {
                             return value.clone();
@@ -395,11 +302,14 @@ impl Expr {
                 })
             }
             Expr::Assign { id: _, name, value } => {
-                let new_value = (*value).evaluate(environment.clone(), distance)?;
-                let assign_success =
-                    environment
-                        .borrow_mut()
-                        .assign(&name.lexeme, new_value.clone(), distance);
+                let distance = locals.borrow().get(&self.get_id()).cloned();
+                //.ok_or_else(|| format!("Couldnt resolve assignment to {name:?}"))?;
+                // Can be None if global
+                // ! Important that this matches with the resolver
+                let new_value = (*value).evaluate(environment.clone(), locals.clone())?;
+                let assign_success = environment
+                    .borrow_mut()
+                    .assign(&name.lexeme, new_value.clone(), distance);
 
                 if assign_success {
                     Ok(new_value)
@@ -408,34 +318,39 @@ impl Expr {
                 }
             }
             Expr::Variable { id: _, name } => {
+                let distance = locals.borrow().get(&self.get_id()).cloned();
                 match environment.borrow().get(&name.lexeme, distance) {
                     Some(value) => Ok(value.clone()),
-                    None => Err(format!("Variable '{}' has not been declared", name.lexeme)),
+                    None =>
+                        Err(
+                            format!(
+                                "Variable '{}' has not been declared at distance {distance:?}",
+                                name.lexeme
+                            )
+                        ),
                 }
             }
-            Expr::Call {
-                id: _,
-                callee,
-                paren: _,
-                arguments,
-            } => {
+            Expr::Call { id: _, callee, paren: _, arguments } => {
                 // Look up function definition in environment
-                let callable = (*callee).evaluate(environment.clone(), distance)?;
+                // let callable_distance = locals.borrow().get(&self.get_id());
+                let callable = (*callee).evaluate(environment.clone(), locals.clone())?;
                 match callable {
                     Callable { name, arity, fun } => {
                         // Do some checking (correct number of args?)
                         if arguments.len() != arity {
-                            return Err(format!(
-                                "Callable {} expected {} arguments but got {}",
-                                name,
-                                arity,
-                                arguments.len()
-                            ));
+                            return Err(
+                                format!(
+                                    "Callable {} expected {} arguments but got {}",
+                                    name,
+                                    arity,
+                                    arguments.len()
+                                )
+                            );
                         }
                         // Evaluate arguments
                         let mut arg_vals = vec![];
                         for arg in arguments {
-                            let val = arg.evaluate(environment.clone(), distance)?;
+                            let val = arg.evaluate(environment.clone(), locals.clone())?;
                             arg_vals.push(val);
                         }
                         // Apply to arguments
@@ -445,39 +360,33 @@ impl Expr {
                 }
             }
             Expr::Literal { id: _, value } => Ok((*value).clone()),
-            Expr::Logical {
-                id: _,
-                left,
-                operator,
-                right,
-            } => match operator.token_type {
-                TokenType::Or => {
-                    let lhs_value = left.evaluate(environment.clone(), distance)?;
-                    let lhs_true = lhs_value.is_truthy();
-                    if lhs_true == True {
-                        Ok(lhs_value)
-                    } else {
-                        right.evaluate(environment.clone(), distance)
+            Expr::Logical { id: _, left, operator, right } =>
+                match operator.token_type {
+                    TokenType::Or => {
+                        let lhs_value = left.evaluate(environment.clone(), locals.clone())?;
+                        let lhs_true = lhs_value.is_truthy();
+                        if lhs_true == True {
+                            Ok(lhs_value)
+                        } else {
+                            right.evaluate(environment.clone(), locals.clone())
+                        }
                     }
-                }
-                TokenType::And => {
-                    let lhs_value = left.evaluate(environment.clone(), distance)?;
-                    let lhs_true = lhs_value.is_truthy();
-                    if lhs_true == False {
-                        Ok(lhs_true)
-                    } else {
-                        right.evaluate(environment.clone(), distance)
+                    TokenType::And => {
+                        let lhs_value = left.evaluate(environment.clone(), locals.clone())?;
+                        let lhs_true = lhs_value.is_truthy();
+                        if lhs_true == False {
+                            Ok(lhs_true)
+                        } else {
+                            right.evaluate(environment.clone(), locals.clone())
+                        }
                     }
+                    ttype => Err(format!("Invalid token in logical expression: {}", ttype)),
                 }
-                ttype => Err(format!("Invalid token in logical expression: {}", ttype)),
-            },
-            Expr::Grouping { id: _, expression } => expression.evaluate(environment, distance),
-            Expr::Unary {
-                id: _,
-                operator,
-                right,
-            } => {
-                let right = right.evaluate(environment, distance)?;
+            Expr::Grouping { id: _, expression } => {
+                expression.evaluate(environment, locals.clone())
+            }
+            Expr::Unary { id: _, operator, right } => {
+                let right = right.evaluate(environment, locals.clone())?;
 
                 match (&right, operator.token_type) {
                     (Number(x), TokenType::Minus) => Ok(Number(-x)),
@@ -488,14 +397,9 @@ impl Expr {
                     (_, ttype) => Err(format!("{} is not a valid unary operator", ttype)),
                 }
             }
-            Expr::Binary {
-                id: _,
-                left,
-                operator,
-                right,
-            } => {
-                let left = left.evaluate(environment.clone(), distance)?;
-                let right = right.evaluate(environment.clone(), distance)?;
+            Expr::Binary { id: _, left, operator, right } => {
+                let left = left.evaluate(environment.clone(), locals.clone())?;
+                let right = right.evaluate(environment.clone(), locals.clone())?;
 
                 match (&left, operator.token_type, &right) {
                     (Number(x), TokenType::Plus, Number(y)) => Ok(Number(x + y)),
@@ -538,10 +442,10 @@ impl Expr {
                     (StringValue(s1), TokenType::LessEqual, StringValue(s2)) => {
                         Ok(LiteralValue::from_bool(s1 <= s2))
                     }
-                    (x, ttype, y) => Err(format!(
-                        "{} is not implemented for operands {:?} and {:?}",
-                        ttype, x, y
-                    )),
+                    (x, ttype, y) =>
+                        Err(
+                            format!("{} is not implemented for operands {:?} and {:?}", ttype, x, y)
+                        ),
                 }
             }
         }
