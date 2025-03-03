@@ -1,6 +1,6 @@
 // --- Test
 
-fun cmd <- "grep result tests/cases/echo_cmd.jlox";
+fun cmd <- "grep result tests/cases/echo_cmd.dena";
 
 var result = cmd();
 print result;

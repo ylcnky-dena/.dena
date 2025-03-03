@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn execute_tests() {
-        let cases = read_dir("/home/codescope/projects/cii/src/tests/cases").unwrap();
+        let cases = read_dir("/tests/cases").unwrap();
 
         let mut errors = vec![];
         let mut msgs = vec![];
