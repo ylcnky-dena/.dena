@@ -5,9 +5,10 @@ mod tests {
 
     #[test]
     fn execute_tests() {
-        let cases = read_dir("src/tests/cases").unwrap();
+        let cases = read_dir("/home/codescope/projects/cii/src/tests/cases").unwrap();
 
         let mut errors = vec![];
+        let mut msgs = vec![];
         for case in cases {
             let case = case.unwrap();
             let name = case.path().display().to_string();
@@ -16,12 +17,20 @@ mod tests {
             }
 
             match run_test(case) {
-                Ok(_) => (),
+                Ok(_) => {
+                    msgs.push(format!("Running {name:.<85}...ok"));
+                },
                 Err(msg) => {
                     errors.push(msg);
-                    break;
+                    msgs.push(format!("Running {name:.<85}...failed"));
                 }
             }
+        }
+
+        println!("Ran {} tests", msgs.len());
+        msgs.sort();
+        for msg in msgs {
+            println!("{}", msg);
         }
 
         if errors.len() > 0 {
@@ -100,4 +109,3 @@ mod tests {
         Ok(())
     }
 }
-
