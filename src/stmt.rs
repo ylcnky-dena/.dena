@@ -16,6 +16,11 @@ pub enum Stmt {
     Block {
         statements: Vec<Box<Stmt>>,
     },
+    Class {
+        name: Token,
+        methods: Vec<Box<Stmt>>,
+        superclass: Option<Expr>,
+    },
     IfStmt {
         predicate: Expr,
         then: Box<Stmt>,
@@ -30,6 +35,10 @@ pub enum Stmt {
         params: Vec<Token>,
         body: Vec<Box<Stmt>>,
     },
+    CmdFunction {
+        name: Token,
+        cmd: String,
+    },
     ReturnStmt {
         keyword: Token,
         value: Option<Expr>,
@@ -43,19 +52,35 @@ impl Stmt {
         match self {
             Expression { expression } => expression.to_string(),
             Print { expression } => format!("(print {})", expression.to_string()),
-            Var { name, initializer: _ } => format!("(var {})", name.lexeme),
-            Block { statements } =>
-                format!(
-                    "(block {})",
-                    statements
-                        .into_iter()
-                        .map(|stmt| stmt.to_string())
-                        .collect::<String>()
-                ),
-            IfStmt { predicate: _, then: _, els: _ } => todo!(),
-            WhileStmt { condition: _, body: _ } => todo!(),
-            Function { name: _, params: _, body: _ } => todo!(),
+            Var {
+                name,
+                initializer: _,
+            } => format!("(var {})", name.lexeme),
+            Block { statements } => format!(
+                "(block {})",
+                statements
+                    .into_iter()
+                    .map(|stmt| stmt.to_string())
+                    .collect::<String>()
+            ),
+            IfStmt {
+                predicate: _,
+                then: _,
+                els: _,
+            } => todo!(),
+            WhileStmt {
+                condition: _,
+                body: _,
+            } => todo!(),
+            Function {
+                name: _,
+                params: _,
+                body: _,
+            } => todo!(),
+            CmdFunction { name: _, cmd: _ } => todo!(),
             ReturnStmt { keyword: _, value: _ } => todo!(),
+            _ => todo!(),
         }
     }
 }
+

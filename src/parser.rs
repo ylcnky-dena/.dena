@@ -11,12 +11,13 @@ pub struct Parser {
 #[derive(Debug)]
 enum FunctionKind {
     Function,
+    Method,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
-            tokens: tokens,
+            tokens,
             current: 0,
             next_id: 0,
         }
@@ -25,7 +26,7 @@ impl Parser {
     fn get_id(&mut self) -> usize {
         let id = self.next_id;
         self.next_id += 1;
-        
+
         id
     }
 
@@ -56,13 +57,54 @@ impl Parser {
             self.var_declaration()
         } else if self.match_token(Fun) {
             self.function(FunctionKind::Function)
+        } else if self.match_token(Class) {
+            self.class_declaration()
         } else {
             self.statement()
         }
     }
 
+    fn class_declaration(&mut self) -> Result<Stmt, String> {
+        let name = self.consume(Identifier, "Expected name after 'class' keyword.")?;
+        let superclass = if self.match_token(TokenType::Less) {
+            self.consume(Identifier, "Expected superclass name after '<'.")?;
+            Some(Expr::Variable {
+                id: self.get_id(),
+                name: self.previous(),
+            })
+        } else {
+            None
+        };
+
+        self.consume(LeftBrace, "Expected '{' before class body.")?;
+
+        let mut methods = vec![];
+        while !self.check(RightBrace) && !self.is_at_end() {
+            let method = self.function(FunctionKind::Method)?;
+            methods.push(Box::new(method));
+        }
+
+        self.consume(RightBrace, "Expected '}' after class body.")?;
+
+        Ok(Stmt::Class {
+            name,
+            methods,
+            superclass,
+        })
+    }
+
     fn function(&mut self, kind: FunctionKind) -> Result<Stmt, String> {
         let name = self.consume(Identifier, &format!("Expected {kind:?} name"))?;
+
+        if self.match_token(Gets) {
+            let cmd_body = self.consume(StringLit, "Expected command body")?; 
+            self.consume(Semicolon, "Expected ';' after command body")?;
+
+            return Ok(Stmt::CmdFunction {
+                name,
+                cmd: cmd_body.lexeme,
+            });
+        }
 
         self.consume(LeftParen, &format!("Expected '(' after {kind:?} name"))?;
 
@@ -116,7 +158,7 @@ impl Parser {
 
         Ok(Stmt::Var {
             name: token,
-            initializer: initializer,
+            initializer,
         })
     }
 
@@ -328,7 +370,7 @@ impl Parser {
 
     fn assignment(&mut self) -> Result<Expr, String> {
         // a = 2; NOT var a = 2;
-        let expr = self.pipe()?;
+        let expr = self.pipe()?; // a |> f = 2;
 
         if self.match_token(Equal) {
             let value = self.expression()?;
@@ -338,6 +380,16 @@ impl Parser {
                     id: self.get_id(),
                     name,
                     value: Box::from(value),
+                }),
+                Get {
+                    id: _,
+                    object,
+                    name,
+                } => Ok(Set {
+                    id: self.get_id(),
+                    object,
+                    name,
+                    value: Box::new(value),
                 }),
                 _ => Err("Invalid assignment target.".to_string()),
             }
@@ -352,7 +404,7 @@ impl Parser {
         // expr |> (f1 |> f2)
         // expr |> (f1 |> (f2 |> f3))
         // (expr |> f1) |> f2
-        
+
         // expr |> fun (a) { return a + 1; }
         // expr |> a -> a + 1
         let mut expr = self.or()?;
@@ -364,8 +416,8 @@ impl Parser {
                 id: self.get_id(),
                 callee: Box::new(function),
                 paren: pipe,
-                arguments: vec![expr]};
-
+                arguments: vec![expr],
+            };
         }
         Ok(expr)
     }
@@ -380,7 +432,7 @@ impl Parser {
             expr = Logical {
                 id: self.get_id(),
                 left: Box::new(expr),
-                operator: operator,
+                operator,
                 right: Box::new(right),
             };
         }
@@ -397,7 +449,7 @@ impl Parser {
             expr = Logical {
                 id: self.get_id(),
                 left: Box::new(expr),
-                operator: operator,
+                operator,
                 right: Box::new(right),
             };
         }
@@ -413,7 +465,7 @@ impl Parser {
             expr = Binary {
                 id: self.get_id(),
                 left: Box::from(expr),
-                operator: operator,
+                operator,
                 right: Box::from(rhs),
             };
         }
@@ -491,6 +543,13 @@ impl Parser {
         loop {
             if self.match_token(LeftParen) {
                 expr = self.finish_call(expr)?;
+            } else if self.match_token(Dot) {
+                let name = self.consume(Identifier, "Expected token after dot-accessor")?;
+                expr = Get {
+                    id: self.get_id(),
+                    object: Box::new(expr),
+                    name,
+                };
             } else {
                 break;
             }
@@ -554,11 +613,30 @@ impl Parser {
                     id: self.get_id(),
                     name: self.previous(),
                 };
-            },
+            }
+            TokenType::This => {
+                self.advance();
+                result = Expr::This {
+                    id: self.get_id(),
+                    keyword: token,
+                };
+            }
+            TokenType::Super => {
+                // Should always occur with a method call
+                self.advance();
+                self.consume(TokenType::Dot, "Expected '.' after 'super'.")?;
+                let method =
+                    self.consume(TokenType::Identifier, "Expected superclass method name.")?;
+                result = Expr::Super {
+                    id: self.get_id(),
+                    keyword: token,
+                    method,
+                };
+            }
             Fun => {
                 self.advance();
                 result = self.function_expression()?;
-            },
+            }
             _ => return Err("Expected expression".to_string()),
         }
 

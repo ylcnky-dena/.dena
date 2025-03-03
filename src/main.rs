@@ -10,12 +10,10 @@ use crate::interpreter::*;
 use crate::parser::*;
 use crate::resolver::*;
 use crate::scanner::*;
-use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::io::{self, BufRead, Write};
 use std::process::exit;
-use std::rc::Rc;
 
 pub fn run_file(path: &str) -> Result<(), String> {
     // let mut interpreter = Interpreter::new();
@@ -26,36 +24,29 @@ pub fn run_file(path: &str) -> Result<(), String> {
 }
 
 pub fn run_string(contents: &str) -> Result<(), String> {
-    let interpreter = Rc::new(RefCell::new(Interpreter::new()));
+    let mut interpreter = Interpreter::new();
 
-    run(interpreter, contents)
+    run(&mut interpreter, contents)
 }
 
-fn run(interpreter: Rc<RefCell<Interpreter>>, contents: &str) -> Result<(), String> {
+fn run(interpreter: &mut Interpreter, contents: &str) -> Result<(), String> {
     let mut scanner = Scanner::new(contents);
     let tokens = scanner.scan_tokens()?;
 
     let mut parser = Parser::new(tokens);
     let stmts = parser.parse()?;
 
-    // for stmt in &stmts {
-    //     println!("{stmt:?}");
-    // }
-    
-    let mut resolver = Resolver::new(interpreter.clone());
-    resolver.resolve_many(&stmts.iter().collect())?;
-    // println!("#####################RESOLVE DONE###############");
-    // for stmt in &stmts {
-    //     println!("{stmt:?}");
-    // }
+    let resolver = Resolver::new();
+    let locals = resolver.resolve(&stmts.iter().collect())?;
 
-    // Ok(())
-    interpreter.borrow_mut().interpret(stmts.iter().collect())?;
+    interpreter.resolve(locals);
+
+    interpreter.interpret(stmts.iter().collect())?;
     return Ok(());
 }
 
 fn run_prompt() -> Result<(), String> {
-    let interpreter = Rc::new(RefCell::new(Interpreter::new()));
+    let mut interpreter = Interpreter::new();
     loop {
         print!("> ");
         match io::stdout().flush() {
@@ -68,15 +59,18 @@ fn run_prompt() -> Result<(), String> {
         let mut handle = stdin.lock();
         match handle.read_line(&mut buffer) {
             Ok(n) => {
-                if n <= 1 {
+                if n == 0 {
+                    println!("");
                     return Ok(());
+                } else if n == 1 {
+                    continue;
                 }
             }
             Err(_) => return Err("Couldnt read line".to_string()),
         }
 
         println!("ECHO: {}", buffer);
-        match run(interpreter.clone(), &buffer) {
+        match run(&mut interpreter, &buffer) {
             Ok(_) => (),
             Err(msg) => println!("{}", msg),
         }
@@ -111,7 +105,7 @@ fn main() {
             }
         }
     } else {
-        println!("Usage: dena [script]");
+        println!("Usage: jlox [script]");
         exit(64);
     }
 }

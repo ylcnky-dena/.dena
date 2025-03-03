@@ -1,50 +1,41 @@
 use crate::environment::Environment;
-use crate::expr::LiteralValue;
+use crate::expr::{CallableImpl, LiteralValue, LoxFunctionImpl, NativeFunctionImpl};
 use crate::scanner::Token;
 use crate::stmt::Stmt;
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::process::Command;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    pub specials: Rc<RefCell<HashMap<String, LiteralValue>>>,
-    pub environment: Rc<RefCell<Environment>>,
-    pub locals: Rc<RefCell<HashMap<usize, usize>>>,
+    pub specials: HashMap<String, LiteralValue>,
+    pub environment: Environment,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            specials: Rc::new(RefCell::new(HashMap::new())),
-            environment: Rc::new(RefCell::new(Environment::new())),
-            locals: Rc::new(RefCell::new(HashMap::new())),
+            specials: HashMap::new(),
+            environment: Environment::new(HashMap::new()),
         }
     }
 
-    fn for_closure(
-        parent: Rc<RefCell<Environment>>,
-        locals: Rc<RefCell<HashMap<usize, usize>>>
-    ) -> Self {
-        let environment = Rc::new(RefCell::new(Environment::new()));
-        environment.borrow_mut().enclosing = Some(parent);
+    pub fn resolve(&mut self, locals: HashMap<usize, usize>) {
+        self.environment.resolve(locals);
+    }
 
+    pub fn with_env(env: Environment) -> Self {
         Self {
-            specials: Rc::new(RefCell::new(HashMap::new())),
-            environment,
-            locals: locals,
+            specials: HashMap::new(),
+            environment: env,
         }
     }
 
-    pub fn for_anon(
-        parent: Rc<RefCell<Environment>>,
-        locals: Rc<RefCell<HashMap<usize, usize>>>
-    ) -> Self {
-        let mut env = Environment::new();
-        env.enclosing = Some(parent);
+    #[allow(dead_code)]
+    pub fn for_anon(parent: Environment) -> Self {
+        let env = parent.enclose();
         Self {
-            specials: Rc::new(RefCell::new(HashMap::new())),
-            environment: Rc::new(RefCell::new(env)),
-            locals,
+            specials: HashMap::new(),
+            environment: env,
         }
     }
 
@@ -52,39 +43,94 @@ impl Interpreter {
         for stmt in stmts {
             match stmt {
                 Stmt::Expression { expression } => {
-                    expression.evaluate(self.environment.clone(), self.locals.clone())?;
+                    expression.evaluate(self.environment.clone())?;
                 }
                 Stmt::Print { expression } => {
-                    let value = expression.evaluate(self.environment.clone(), self.locals.clone())?;
+                    let value = expression.evaluate(self.environment.clone())?;
                     println!("{}", value.to_string());
                 }
                 Stmt::Var { name, initializer } => {
-                    let value = initializer.evaluate(
-                        self.environment.clone(),
-                        self.locals.clone()
-                    )?;
-                    self.environment.borrow_mut().define(name.lexeme.clone(), value);
+                    let value = initializer.evaluate(self.environment.clone())?;
+                    self.environment.define(name.lexeme.clone(), value);
                 }
                 Stmt::Block { statements } => {
-                    let mut new_environment = Environment::new();
-                    new_environment.enclosing = Some(self.environment.clone());
-                    let old_environment = self.environment.clone();
-                    self.environment = Rc::new(RefCell::new(new_environment));
-                    let block_result = self.interpret(
-                        (*statements)
-                            .iter()
-                            .map(|b| b.as_ref())
-                            .collect()
-                    );
-                    self.environment = old_environment;
+                    let new_environment = self.environment.enclose();
 
+                    //     Environment::new();
+                    // new_environment.enclosing = Some(Box::new(self.environment.clone()));
+                    let old_environment = self.environment.clone();
+                    self.environment = new_environment;
+                    let block_result =
+                        self.interpret((*statements).iter().map(|b| b.as_ref()).collect());
+                    self.environment = old_environment;
+                    // self.environment = self.environment.enclosing.unwrap();
                     block_result?;
                 }
-                Stmt::IfStmt { predicate, then, els } => {
-                    let truth_value = predicate.evaluate(
-                        self.environment.clone(),
-                        self.locals.clone()
-                    )?;
+                Stmt::Class {
+                    name,
+                    methods,
+                    superclass,
+                } => {
+                    let mut methods_map = HashMap::new();
+
+                    // Insert the methods of the superclass into the methods of this class
+                    let superclass_value;
+                    if let Some(superclass) = superclass {
+                        let superclass = superclass.evaluate(self.environment.clone())?;
+                        if let LiteralValue::LoxClass { .. } = superclass {
+                            superclass_value = Some(Box::new(superclass));
+                        } else {
+                            return Err(format!(
+                                "Superclass must be a class, not {}",
+                                superclass.to_type()
+                            ));
+                        }
+                    } else {
+                        superclass_value = None;
+                    }
+
+                    self.environment
+                        .define(name.lexeme.clone(), LiteralValue::Nil);
+
+                    self.environment = self.environment.enclose();
+                    if let Some(sc) = superclass_value.clone() {
+                        self.environment.define("super".to_string(), *sc);
+                    }
+
+                    for method in methods {
+                        if let Stmt::Function {
+                            name,
+                            params: _,
+                            body: _,
+                        } = method.as_ref()
+                        {
+                            let function = self.make_function(method);
+                            methods_map.insert(name.lexeme.clone(), function);
+                        } else {
+                            panic!(
+                                "Something that was not a function was in the methods of a class"
+                            );
+                        }
+                    }
+
+                    let klass = LiteralValue::LoxClass {
+                        name: name.lexeme.clone(),
+                        methods: methods_map,
+                        superclass: superclass_value,
+                    };
+
+                    if !self.environment.assign_global(&name.lexeme, klass) {
+                        return Err(format!("Class definition failed for {}", name.lexeme));
+                    }
+
+                    self.environment = *self.environment.enclosing.clone().unwrap();
+                }
+                Stmt::IfStmt {
+                    predicate,
+                    then,
+                    els,
+                } => {
+                    let truth_value = predicate.evaluate(self.environment.clone())?;
                     if truth_value.is_truthy() == LiteralValue::True {
                         let statements = vec![then.as_ref()];
                         self.interpret(statements)?;
@@ -94,89 +140,88 @@ impl Interpreter {
                     }
                 }
                 Stmt::WhileStmt { condition, body } => {
-                    let mut flag = condition.evaluate(
-                        self.environment.clone(),
-                        self.locals.clone()
-                    )?;
+                    let mut flag = condition.evaluate(self.environment.clone())?;
                     while flag.is_truthy() == LiteralValue::True {
                         let statements = vec![body.as_ref()];
                         self.interpret(statements)?;
-                        flag = condition.evaluate(self.environment.clone(), self.locals.clone())?;
+                        flag = condition.evaluate(self.environment.clone())?;
                     }
                 }
-                Stmt::Function { name, params, body } => {
-                    // Function decl
-                    let arity = params.len();
-                    // Function impl:
-                    // Bind list of input values to names in params
-                    // Add those bindings to the environment used to execute body
-                    // Then execute body
+                Stmt::Function {
+                    name,
+                    params: _,
+                    body: _,
+                } => {
+                    let callable = self.make_function(stmt);
+                    let fun = LiteralValue::Callable(CallableImpl::LoxFunction(callable));
+                    self.environment.define(name.lexeme.clone(), fun);
+                }
+                Stmt::CmdFunction { name, cmd } => {
+                    // Return a callable that runs a shell command, captures the stdout and returns
+                    // it in a String
 
-                    let params: Vec<Token> = params
-                        .iter()
-                        .map(|t| (*t).clone())
-                        .collect();
-                    let body: Vec<Box<Stmt>> = body
-                        .iter()
-                        .map(|b| (*b).clone())
-                        .collect();
-                    let name_clone = name.lexeme.clone();
-                    // TODO Make a struct that contains data for evaluation
-                    // and which implements Fn
+                    let cmd = cmd.clone();
+                    let local_fn = move |_args: &Vec<LiteralValue>| {
+                        let cmd = cmd.clone();
+                        let parts = cmd.split(" ").collect::<Vec<&str>>();
+                        let mut command = Command::new(parts[0].replace("\"", ""));
+                        for part in parts[1..].iter() {
+                            command.arg(part.replace("\"", ""));
+                        }
+                        let output = command.output().expect("Failed to run command");
 
-                    let parent_env = self.environment.clone();
-                    let parent_locals = self.locals.clone();
-                    let fun_impl = move |args: &Vec<LiteralValue>| {
-                        let mut clos_int = Interpreter::for_closure(
-                            parent_env.clone(),
-                            parent_locals.clone()
+
+                        return LiteralValue::StringValue(
+                            std::str::from_utf8(output.stdout.as_slice())
+                                .unwrap()
+                                .to_string(),
                         );
-
-                        for (i, arg) in args.iter().enumerate() {
-                            clos_int.environment
-                                .borrow_mut()
-                                .define(params[i].lexeme.clone(), (*arg).clone());
-                        }
-
-                        for i in 0..body.len() {
-                            clos_int
-                                .interpret(vec![body[i].as_ref()])
-                                .expect(&format!("Evaluating failed inside {}", name_clone));
-
-                            if let Some(value) = clos_int.specials.borrow().get("return") {
-                                return value.clone();
-                            }
-                        }
-
-                        LiteralValue::Nil
                     };
 
-                    let callable = LiteralValue::Callable {
-                        name: name.lexeme.clone(),
-                        arity,
-                        fun: Rc::new(fun_impl),
-                    };
-
-                    self.environment.borrow_mut().define(name.lexeme.clone(), callable);
+                    let fun_val =
+                        LiteralValue::Callable(CallableImpl::NativeFunction(NativeFunctionImpl {
+                            name: name.lexeme.clone(),
+                            arity: 0,
+                            fun: Rc::new(local_fn),
+                        }));
+                    self.environment.define(name.lexeme.clone(), fun_val);
                 }
                 Stmt::ReturnStmt { keyword: _, value } => {
                     let eval_val;
                     if let Some(value) = value {
-                        eval_val = value.evaluate(self.environment.clone(), self.locals.clone())?;
+                        eval_val = value.evaluate(self.environment.clone())?;
                     } else {
                         eval_val = LiteralValue::Nil;
                     }
-                    self.specials.borrow_mut().insert("return".to_string(), eval_val);
+                    self.specials.insert("return".to_string(), eval_val);
                 }
-            }
+            };
         }
 
         Ok(())
     }
 
-    // TODO Try the trick with addresses again
-    pub fn resolve(&mut self, id: usize, steps: usize) -> Result<(), String> {
-        self.locals.borrow_mut().insert(id, steps);
-        Ok(())
+    fn make_function(&self, fn_stmt: &Stmt) -> LoxFunctionImpl {
+        if let Stmt::Function { name, params, body } = fn_stmt {
+            let arity = params.len();
+            let params: Vec<Token> = params.iter().map(|t| (*t).clone()).collect();
+            let body: Vec<Box<Stmt>> = body.iter().map(|b| (*b).clone()).collect();
+            let name_clone = name.lexeme.clone();
+
+            // TODO: Don't clone the whole environment, just the captured variables
+            let parent_env = self.environment.clone();
+
+            let callable_impl = LoxFunctionImpl {
+                name: name_clone,
+                arity,
+                parent_env,
+                params,
+                body,
+            };
+
+            callable_impl
+        } else {
+            panic!("Tried to make a function from a non-function statement");
+        }
     }
 }
